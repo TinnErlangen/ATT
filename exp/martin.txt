@@ -1,0 +1,14 @@
+Subject /home/stim/ATT/martin, recorded on 17.10.2018, 15:30
+Index	Block	Wavfile	Laut	Angenehm
+0	Infrequent visual modulations, ignore audio	4000_fftf.wav	0.030000000000000755	-0.38000000000000017
+1	Infrequent visual modulations, ignore audio	7000Hz.wav	0.6100000000000011	-0.7500000000000004
+2	Infrequent visual modulations, ignore audio	4000Hz.wav	0.550000000000001	-0.6800000000000004
+3	Infrequent visual modulations, ignore audio	4000_cheby.wav	-0.5499999999999996	-0.10999999999999999
+0	Visual modulations only	7000Hz.wav	0.2000000000000008	-0.6200000000000004
+1	Visual modulations only	4000_cheby.wav	-0.02999999999999925	-0.2800000000000001
+2	Visual modulations only	4000Hz.wav	-0.02999999999999925	-0.6800000000000004
+3	Visual modulations only	4000_fftf.wav	-0.6799999999999997	-0.15999999999999998
+0	No modulations, count backward.	4000_fftf.wav	0.09000000000000075	-0.13999999999999999
+1	No modulations, count backward.	4000_cheby.wav	-0.019999999999999248	-0.4100000000000002
+2	No modulations, count backward.	4000Hz.wav	-0.4199999999999995	-0.13999999999999999
+3	No modulations, count backward.	7000Hz.wav	0.3500000000000009	-0.6100000000000003
