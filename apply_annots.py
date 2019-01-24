@@ -1,17 +1,23 @@
 import mne
 from os import listdir
 
+# takes annotations and bad channels produced by annot_cycler and applies them.
+# Useful in case you reconverted, preprocessed the data, and don't want
+# to do everything by hand again.
+
 base_dir ="../"
 proc_dir = base_dir+"proc/"
-subjs = ["ATT_10","ATT_11","ATT_12","ATT_13","ATT_14","ATT_15","ATT_16","ATT_17","ATT_18","ATT_19"]
-subjs = ["NEM_16"]
+subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
+         "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
+         "ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28"]
 runs = [str(x+1) for x in range(5)]
-runs = ["3"]
+#runs = ["3"]
 filelist = listdir(proc_dir)
 
 for sub in subjs:
     for run in runs:
-        raw = mne.io.Raw("{dir}nc_{sub}_{run}-raw.fif".format(dir=proc_dir,sub=sub,run=run))
+        raw = mne.io.Raw("{dir}nc_{sub}_{run}-raw.fif".format(dir=proc_dir,
+                                                              sub=sub,run=run))
         if "nc_{sub}_{run}-raw.fif".format(sub=sub,run=run) in filelist:
             annot = mne.read_annotations("{dir}nc_{sub}_{run}-annot.fif".format(dir=proc_dir,sub=sub,run=run))
             raw.set_annotations(annot)

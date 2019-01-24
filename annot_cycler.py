@@ -1,12 +1,18 @@
 import mne
 import matplotlib.pyplot as plt
 
+# This is a function which reduces the pain of hand-cleaning data. Run in
+# interactive mode (i.e. python -i annot_cycler.py). Then use the go method (cyc.go())
+# to move to the first file. Mark bad channels and sections as desired, then save
+# (cyc.save()), and finally cyc.go() to move to the next file.
+
 plt.ion()
 
 base_dir ="../"
 proc_dir = base_dir+"proc/"
-subjs = ["ATT_10","ATT_11","ATT_12","ATT_13","ATT_14","ATT_15","ATT_16","ATT_17","ATT_18","ATT_19"]
-#subjs = ["NEM_16"]
+subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
+         "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
+         "ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28"]
 runs = [str(x+1) for x in range(5)]
 #runs = ["3"]
 
