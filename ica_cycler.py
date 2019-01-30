@@ -11,7 +11,7 @@ base_dir ="../"
 proc_dir = base_dir+"proc/"
 subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
-         "ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28"]
+         "ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28"]#{}, {}"ATT_29"]
 #subjs = ["NEM_16"]
 runs = [str(x+1) for x in range(5)]
 #runs = ["3"]
@@ -29,6 +29,7 @@ class Cycler():
         self.filelist = filelist
 
     def go(self):
+        plt.close('all')
         # load the next raw/ICA files
         self.fn = self.filelist.pop()
         self.raw = mne.io.Raw(self.fn[0],preload=True)
@@ -37,7 +38,7 @@ class Cycler():
 
         # housekeeping on reference components, add them to raw data
         refcomps = self.icaref.get_sources(self.raw)
-        for c in refcomps.ch_names: # they need to have REF_ prefix to be recognised by MNE algorithm
+        for c in refcomps.ch_names[:4]: # they need to have REF_ prefix to be recognised by MNE algorithm
             refcomps.rename_channels({c:"REF_"+c})
         self.raw.add_channels([refcomps])
         self.comps = []
@@ -56,8 +57,10 @@ class Cycler():
     def show_file(self):
         print("Current raw file: "+self.fn[0])
 
-    def without(self,comps,fmax=40):
+    def without(self,comps=None,fmax=40):
         # see what the data would look like if we took comps out
+        if not comps:
+            comps = self.comps
         test = self.raw.copy()
         test.load_data()
         test = self.icameg.apply(test,exclude=comps)
@@ -65,7 +68,7 @@ class Cycler():
         test.plot(duration=30,n_channels=30)
         self.test = test
 
-    def identify_ref(self,threshold=4):
+    def identify_ref(self,threshold=3.5):
         # search for components which correlate with reference components
         ref_inds, scores = self.icameg.find_bads_ref(self.raw,threshold=threshold)
         if ref_inds:
@@ -77,10 +80,12 @@ class Cycler():
 
     def save(self,comps=None):
         # save the new file
-        if comps:
-            self.icameg.apply(self.raw,exclude=self.comps+comps).save(self.fn[0][:-8]+"_ica-epo.fif")
+        if not comps:
+            self.icameg.apply(self.raw,exclude=self.comps).save(self.fn[0][:-8]+"_ica-raw.fif")
+        elif isinstance(comps,list):
+            self.icameg.apply(self.raw,exclude=self.comps+comps).save(self.fn[0][:-8]+"_ica-raw.fif")
         else:
             print("No components applied, saving anyway for consistency.")
-            self.raw.save(self.fn[0][:-8]+"_ica1-epo.fif")
+            self.raw.save(self.fn[0][:-8]+"_ica-raw.fif")
 
 cyc = Cycler(filelist)

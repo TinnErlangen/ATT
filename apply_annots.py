@@ -9,7 +9,9 @@ base_dir ="../"
 proc_dir = base_dir+"proc/"
 subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
-         "ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28"]
+         "ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28", "ATT_29"]
+subjs = ["ATT_20", "ATT_21", "ATT_22", "ATT_23",
+"ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28", "ATT_29"]
 runs = [str(x+1) for x in range(5)]
 #runs = ["3"]
 filelist = listdir(proc_dir)
