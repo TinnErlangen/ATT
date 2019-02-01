@@ -14,9 +14,9 @@ breadths = np.array([0.25, 2.0, 1.5, 0.5, 0.5, 0.5, 0.5])
 subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
          "ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28", "ATT_29"]
-#subjs = ["ATT_29"]
+subjs = ["ATT_29"]
 runs = [str(x+1) for x in range(5)]
-#runs = ["3"]
+runs = ["3"]
 
 for sub in subjs:
     for run_idx,run in enumerate(runs):
@@ -51,7 +51,7 @@ for sub in subjs:
             raw.annotations.append(start,finish-start,"bad nostim")
 
         picks = mne.pick_types(raw.info,meg=True,ref_meg=True) # get channels we want to filter
-        raw.filter(l_freq,h_freq,picks=picks)
+        raw.filter(l_freq,h_freq,picks=picks,n_jobs="cuda")
         raw.notch_filter(notches,n_jobs="cuda",picks=picks, notch_widths=breadths)
         raw,eventsresps = raw.resample(200,events=eventsresps,n_jobs="cuda")
         # now that downsampling is done, pull them back apart.

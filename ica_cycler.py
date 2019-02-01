@@ -12,6 +12,8 @@ proc_dir = base_dir+"proc/"
 subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
          "ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28", "ATT_29"]
+subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
+         "ATT_17", "ATT_18", "ATT_19", "ATT_20"]
 
 runs = [str(x+1) for x in range(5)]
 #runs = ["3"]
@@ -23,7 +25,7 @@ for sub in subjs:
         "{dir}nc_{sub}_{run}_hand_ref-ica.fif".format(dir=proc_dir,sub=sub,run=run),
         "{dir}nc_{sub}_{run}_hand_meg-ica.fif".format(dir=proc_dir,sub=sub,run=run)])
 
-ref_comp_num = 1
+ref_comp_num = 2
 
 class Cycler():
 
@@ -81,7 +83,6 @@ class Cycler():
             print(ref_inds)
             #self.icameg.plot_properties(self.raw,ref_inds)
             self.comps += ref_inds
-
 
     def save(self,comps=None):
         # save the new file
