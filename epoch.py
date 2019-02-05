@@ -1,7 +1,9 @@
 import mne
 import numpy as np
 
-subjs = ["ATT_10"]
+subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
+         "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
+         "ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28", "ATT_29"]
 runs = [str(x+1) for x in range(5)]
 base_dir ="../"
 proc_dir = base_dir+"proc/"
@@ -11,7 +13,7 @@ epolen = 2
 for sub in subjs:
     epos = []
     for run_idx,run in enumerate(runs):
-        raw = mne.io.Raw("{dir}nc_{sub}_{run}_hand-raw.fif".format(
+        raw = mne.io.Raw("{dir}nc_{sub}_{run}_hand_ica-raw.fif".format(
         dir=proc_dir,sub=sub,run=run))
         events = np.load("{dir}nc_{sub}_{run}_events.npy".format(
         dir=proc_dir,sub=sub,run=run))
