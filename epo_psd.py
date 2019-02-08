@@ -1,9 +1,10 @@
 import mne
 import numpy as np
 import matplotlib.pyplot as plt
+plt.ion()
 
 class ILine:
-    def __init__(self,line,cols,epo_ids,trial_ids):
+    def __init__(self,lines,cols,epo_ids,trial_ids):
         self.lines = lines
         self.cols = cols
         self.epo_ids = epo_ids
@@ -26,8 +27,51 @@ class ILine:
                     self.lines[l_idx].set_color(self.cols[l_idx])
 
 class Cycler():
-    def __init__(self,)
-
+    def __init__(self,subjs,conds,fmax):
+        self.subjs = subjs
+        self.conds = conds
+        self.fmax = fmax
+    def go(self):
+        self.epos = []
+        self.files = []
+        sub = self.subjs.pop()
+        for cond_idx,cond in enumerate(self.conds):
+            self.files.append("{dir}nc_{sub}_{cond}-epo.fif".format(dir=proc_dir,sub=sub,cond=cond))
+            self.epos.append(mne.read_epochs(self.files[-1]))
+        self.fig, self.axes = plt.subplots(5,1)
+        self.draw()
+    def draw(self):
+        gen_min, gen_max = np.inf, 0
+        for epo_idx,epo in enumerate(self.epos):
+            start = np.min(epo.events[:,0])
+            finish = np.max(epo.events[:,0]) + epo.times[-1]+epo.info["sfreq"]
+            psds, freqs = mne.time_frequency.psd_multitaper(epo,fmax=self.fmax,adaptive=True,
+                                                            n_jobs=4)
+            psd = np.mean(psds,axis=1)
+            gen_min = np.min(psd) if np.min(psd)<gen_min else gen_min
+            gen_max = np.max(psd) if np.max(psd)>gen_max else gen_max
+            lines, cols, epo_idxs, l_idxs = [], [], [], []
+            for l_idx in range(psd.shape[0]):
+                col = (epo.events[l_idx,0]-start)/(finish-start)
+                col = (1-col,0,col)
+                cols.append(col)
+                lines.append(self.axes[epo_idx].plot(psd[l_idx,],color=col,linewidth=2,
+                                   alpha=0.2)[0])
+                ticks = list(range(0,len(freqs),5))
+                labels = [np.round(freqs[x],decimals=1) for x in ticks]
+                self.axes[epo_idx].set_xticks(ticks)
+                self.axes[epo_idx].set_xticklabels(labels)
+                epo_idxs.append(epo_idx)
+                l_idxs.append(l_idx)
+            self.ilines = ILine(lines,cols,epo_idxs,l_idxs)
+        for ax in self.axes:
+            ax.set_ylim(gen_min,gen_max)
+    def trim(self):
+        epo_idxs = self.ilines.epo_id[~self.ilines.ons]
+        for epo_idx,epo in enumerate(self.epos):
+            bad_trials = epo_idxs==epo_idx
+            epo.drop(bad_trials)
+        self.draw()
 
 
 proc_dir = "../proc/"
@@ -37,35 +81,5 @@ subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28", "ATT_29"]
 
 sub = "ATT_17"
-epos = []
-for cond_idx,cond in enumerate(conds):
-    filename = "{dir}nc_{sub}_{cond}-epo.fif".format(dir=proc_dir,sub=sub,cond=cond)
-    epos.append(mne.read_epochs(filename))
-plt.ion()
-fmax=30
-fig, axes = plt.subplots(5,1)
-gen_min, gen_max = np.inf, 0
-lines, cols, epo_idxs, l_idxs = [], [], [], []
-for epo_idx,epo in enumerate(epos):
-    start = np.min(epo.events[:,0])
-    finish = np.max(epo.events[:,0]) + epo.times[-1]+epo.info["sfreq"]
-    psds, freqs = mne.time_frequency.psd_multitaper(epo,fmax=fmax,adaptive=True,
-                                                    n_jobs=4)
-    psd = np.mean(psds,axis=1)
-    gen_min = np.min(psd) if np.min(psd)<gen_min else gen_min
-    gen_max = np.max(psd) if np.max(psd)>gen_max else gen_max
-    for l_idx in range(psd.shape[0]):
-        col = (epo.events[l_idx,0]-start)/(finish-start)
-        col = (1-col,0,col)
-        cols.append(col)
-        lines.append(axes[epo_idx].plot(psd[l_idx,],color=col,linewidth=2,
-                           alpha=0.2)[0])
-        ticks = list(range(0,len(freqs),5))
-        labels = [np.round(freqs[x],decimals=1) for x in ticks]
-        axes[epo_idx].set_xticks(ticks)
-        axes[epo_idx].set_xticklabels(labels)
-        epo_idxs.append(epo_idx)
-        l_idxs.append(l_idx)
-ilines = ILine(lines,cols,epo_idxs,l_idxs)
-for ax in axes:
-    ax.set_ylim(gen_min,gen_max)
+
+cyc = Cycler(subjs,conds,fmax=50)
