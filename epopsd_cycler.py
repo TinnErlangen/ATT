@@ -34,13 +34,15 @@ class Cycler():
     def go(self):
         self.epos = []
         self.files = []
-        sub = self.subjs.pop()
+        self.sub = self.subjs.pop()
         for cond_idx,cond in enumerate(self.conds):
-            self.files.append("{dir}nc_{sub}_{cond}-epo.fif".format(dir=proc_dir,sub=sub,cond=cond))
+            self.files.append("{dir}nc_{sub}_{cond}-epo.fif".format(dir=proc_dir,sub=self.sub,cond=cond))
             self.epos.append(mne.read_epochs(self.files[-1]))
+        plt.close('all')
         self.fig, self.axes = plt.subplots(5,1)
         self.draw()
     def draw(self):
+
         gen_min, gen_max = np.inf, 0
         lines, cols, epo_idxs, l_idxs = [], [], [], []
         for epo_idx,epo in enumerate(self.epos):
@@ -77,6 +79,8 @@ class Cycler():
     def save(self):
         for epo in self.epos:
             epo.save(epo.filename[:-8]+"_hand-epo.fif")
+    def show_file(self):
+        print("Current subject: "+self.sub)
 
 
 proc_dir = "../proc/"
