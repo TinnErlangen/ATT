@@ -15,7 +15,7 @@ subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
 subjs = ["ATT_17"]
 
 runs = [str(x+1) for x in range(5)]
-runs = ["1"]
+runs = ["2"]
 
 filelist = []
 for sub in subjs:
@@ -24,7 +24,7 @@ for sub in subjs:
         "{dir}nc_{sub}_{run}_hand_ref-ica.fif".format(dir=proc_dir,sub=sub,run=run),
         "{dir}nc_{sub}_{run}_hand_meg-ica.fif".format(dir=proc_dir,sub=sub,run=run)])
 
-ref_comp_num = 2
+ref_comp_num = 20
 
 class Cycler():
 
