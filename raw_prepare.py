@@ -4,7 +4,7 @@ import mne
 # Get events, mark sections where no stimulus occurs (specific to ATT),
 # filter, downsample, save.
 
-base_dir ="/media/hdd/jeff/ATT_dat/"
+base_dir ="/home/jeff/ATT_dat/"
 proc_dir = base_dir+"proc/"
 
 l_freq=None
