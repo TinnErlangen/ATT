@@ -1,7 +1,7 @@
 from scipy.io import wavfile
 import numpy as np
 from psychopy import visual, prefs, event, core
-prefs.general["audioLib"] = ["pyo"]
+prefs.hardware["audioLib"] = ["pygame"]
 from psychopy import sound
 import datetime
 from tkinter import filedialog
@@ -30,7 +30,7 @@ class VisObj():
         if self.color:
             self.visobj.color = self.color.pop(0)
         self.visobj.draw()
-        
+
 class SoundWrap():
     # class contains sound, sound info, and information required for performing iterative operations on them
     def __init__(self,name,data,operation,ops):
@@ -40,7 +40,7 @@ class SoundWrap():
         self.ops = ops # which arguments to pass to the operation
     def operate(self,side_idx,**kwargs):
         self.data[:,side_idx] = self.operation(self.data[:,side_idx],**kwargs)
-    
+
 def audio_load(sound_name):
     nptypes = {np.dtype("int16"):32768,np.dtype("int32"):2147483648,np.dtype("float32"):1}
     fs,data = wavfile.read(sound_name)
@@ -66,28 +66,28 @@ def incr_dcb(data,dcb_delta=0,direction=-1):
         newdcb = dcb - dcb_delta
     newdcb[newdcb<-160]=-160
     return dcb2dec(newdcb)*np.sign(data)
-    
+
 
 def col_anim(beg,end,steps):
     col_list = []
     for col_idx in range(3):
         col_list.append(list(np.linspace(beg[col_idx],end[col_idx],steps)))
     return list(zip(*col_list))
-    
+
 def pos_anim(beg,end,steps):
     pos_list = []
     for pos_idx in range(2):
         pos_list.append(list(np.linspace(beg[pos_idx],end[pos_idx],steps)))
     return list(zip(*pos_list))
-            
-class HearTest():    
+
+class HearTest():
 
     def __init__(self,sound_name_list,key_presses,ops,quorum,
       play_duration=2, jitter_range=(0.5,2), practice=0,
       monitor_idx=0,beamer_idx=-1,monitor_fps=None,beamer_fps=None,
       back_color=(0,0,0),text_color=(-1,-1,-1),beamsize=(1280,1024),
       monsize=(700,700)):
-        
+
         self.sound_name_list = sound_name_list
         self.key_presses = key_presses
         self.ops = ops
@@ -103,14 +103,14 @@ class HearTest():
         self.monsize = monsize
         self.beamsize = beamsize
         self.text_color = text_color
-    
+
     def draw_visobjs(self,visobjs):
         vis_list = list(visobjs.values())
         for vis in vis_list:
             vis.draw()
-    
+
     def go(self):
-        
+
         sound_name_list= self.sound_name_list
         key_presses= self.key_presses
         ops = self.ops
@@ -123,25 +123,25 @@ class HearTest():
         monitor_fps = self.monitor_fps
         beamer_fps = self.beamer_fps
         back_color = self.back_color
-             
+
         thresh_results = []
         abort = 0
-        
+
         # set up the monitors
         beamer = None
         monitor = visual.Window(size=self.monsize,color=self.back_color,screen=monitor_idx,
                                 winType="pyglet",useFPO=False,waitBlanking=False)
-       
+
         print("Monitor fps: " + str(monitor_fps))
-        if beamer_idx > -1:    
+        if beamer_idx > -1:
             beamer = visual.Window(size=self.beamsize,color=back_color,screen=beamer_idx,
                                    winType="pyglet",useFPO=False,waitBlanking=False)
             print("Beamer fps: "+ str(beamer_fps))
-        
+
         visobjs = {}
         beamobjs = {}
         # set up the complex of visual objects
-    
+
         # text
         visobjs["tonepress_label"] = visual.TextStim(win=monitor,text="Sound/Press",pos=(-0.9,0.9),height=0.07,color=self.text_color,alignHoriz="left")
         visobjs["tonepress_l"] = visual.TextStim(win=monitor,text="L",pos=(-0.8,0.8),height=0.1,color=self.text_color)
@@ -156,11 +156,11 @@ class HearTest():
         visobjs["mode"] = visual.TextStim(win=monitor,text="Normal Mode",pos=(-0.95,-0.5),height=0.08,color=self.text_color,alignHoriz="left")
         visobjs["status"] = visual.TextStim(win=monitor,text="Running",pos=(0.05,-0.5),height=0.08,color=self.text_color,alignHoriz="left")
         visobjs["message"] = visual.TextStim(win=monitor,text="press p to pause, a to abort",pos=(-0.95,-0.8),height=0.06,color=self.text_color,alignHoriz="left")
-    
+
         if practice:
             visobjs["mode"].text = "Practice"
             visobjs["mode"].color = (1,-1,-1)
-        
+
         if beamer is not None:
             beamobjs["befehl"] = visual.TextStim(win=beamer,
                    text="Drücke sofort RECHTS bei einem Ton im rechten Ohr.\n\n\nDrücke sofort LINKS bei einem Ton im linken Ohr.",
@@ -169,7 +169,7 @@ class HearTest():
                     height=0.1,color=back_color))
             self.draw_visobjs(beamobjs)
             beamer.flip()
-        
+
         # tone/press squares
         visobjs["lefttone"] = VisObj(visual.Rect(
           win=monitor,units="norm",width=0.1,height=0.1,pos=(-0.8,0.7),lineColor=[-1,-1,-1]))
@@ -179,7 +179,7 @@ class HearTest():
           win=monitor,units="norm",width=0.1,height=0.1,pos=(-0.8,0.6),lineColor=[-1,-1,-1]))
         visobjs["rightpress"] = VisObj(visual.Rect(
           win=monitor,units="norm",width=0.1,height=0.1,pos=(-0.7,0.6),lineColor=[-1,-1,-1]))
-    
+
         # accuracy squares
         acc_pane_names = [[],[]]
         for s_idx,s in enumerate(zip(["left","right"],[0.3,0.15])):
@@ -188,7 +188,7 @@ class HearTest():
                 visobjs[acc_pane_names[s_idx][-1]]=VisObj(visual.Rect(
                   win=monitor,units="norm",width=0.1,height=0.1,pos=(-0.8+(p_idx*0.1),s[1]),
                   lineColor=(-1,-1,-1),fillColor=back_color))
-    
+
         # threshold chart
         thresh_height_cent = 0.25
         thresh_width_cent = 0.3
@@ -204,21 +204,21 @@ class HearTest():
         visobjs["thresh_right"] = VisObj(visual.Rect(
           win=monitor,units="norm",width=thresh_width/4,height=0.08,pos=(thresh_width_cent+thresh_width/4,thresh_height_cent),
           lineColor=[-1,-1,-1],fillColor=(-1,-1,1)))
-    
+
         visobjs["thresh_label"] = visual.TextStim(win=monitor,text="Hearing Threshold",pos=(0.3,0.9),height=0.07,color=self.text_color)
         visobjs["thresh_label_l"] = visual.TextStim(win=monitor,text="L",pos=(thresh_width_cent-thresh_width/4,0.8),height=0.1,color=self.text_color)
         visobjs["thresh_label_r"] = visual.TextStim(win=monitor,text="R",pos=(thresh_width_cent+thresh_width/4,0.8),height=0.1,color=self.text_color)
         visobjs["thresh_label_dB"] = visual.TextStim(win=monitor,text="dB",pos=(thresh_width_cent-thresh_width/2-0.13,thresh_height_cent),height=0.1,color=self.text_color)
         visobjs["thresh_label_max"] = visual.TextStim(win=monitor,text="0",pos=(thresh_width_cent-thresh_width/2-0.13,thresh_height_cent+thresh_height/2),height=0.1,color=self.text_color)
         visobjs["thresh_label_min"] = visual.TextStim(win=monitor,text="-160",pos=(thresh_width_cent-thresh_width/2-0.13,thresh_height_cent-thresh_height/2),height=0.1,color=self.text_color)
-        
-        # for every file name,convert to stereo, 
+
+        # for every file name,convert to stereo,
         # and normalise to [-1,1] range, build the SoundWrap objects
         sound_list = []
         for sound_name in sound_name_list:
             snd = audio_load(sound_name)
             sound_list.append(SoundWrap(sound_name,snd,incr_dcb,[ops.copy(),ops.copy()]))
-    
+
         # randomise order of sounds
         reihenfolge = np.array(range(len(sound_name_list)))
         np.random.shuffle(reihenfolge)
@@ -254,7 +254,7 @@ class HearTest():
                         visobjs["righttone"].visobj.fillColor=(-1,1,-1)
                     else:
                         visobjs["lefttone"].visobj.fillColor=(-1,1,-1)
-                    
+
                     for f_idx in range(int(monitor_fps*play_duration)):
                         response = event.getKeys(key_presses)
                         # update press squares
@@ -263,7 +263,7 @@ class HearTest():
                         if response:
                             break
 
-                    sounds[r].stop()        
+                    sounds[r].stop()
                     # turn off sound and update tone squares
                     # allow a short grace period to respond
                     if not response:
@@ -273,14 +273,14 @@ class HearTest():
                             monitor.flip()
                             if grace_response:
                                 break
-                        response = response + grace_response            
-                    
+                        response = response + grace_response
+
                     anim_pattern = col_anim((-1,1,-1),(-1,1,-1),int(monitor_fps*0.15)) + col_anim((0,1,0),back_color,int(monitor_fps*0.2))
                     if r:
                         visobjs["righttone"].fillColor= anim_pattern
                     else:
                         visobjs["lefttone"].fillColor= anim_pattern
-                    
+
                     # mark accuracy, update press squares
                     if key_presses[r] in response and key_presses[1-r] not in response:
                         accs[r].append(1)
@@ -294,7 +294,7 @@ class HearTest():
                             beamobjs["bericht"].visobj.text="Richtig!"
                             beamobjs["bericht"].color = col_anim(back_color,(-1,1,-1),beamer_fps*0.35) + \
                               col_anim((-1,1,-1),back_color,beamer_fps*0.35)
-                            
+
                     elif key_presses[1-r] in response:
                         accs[r].append(0)
                         anim_pattern = col_anim(back_color,(1,-1,-1),int(monitor_fps*0.15)) + \
@@ -313,21 +313,18 @@ class HearTest():
                             beamobjs["bericht"].visobj.text="Verpasst!"
                             beamobjs["bericht"].color = col_anim(back_color,(1,-1,-1),beamer_fps*0.35) + \
                               col_anim((1,-1,-1),back_color,beamer_fps*0.35)
-                    
+
                     # update acc squares
                     if accs[r][-1]:
                         anim_pattern = col_anim(back_color,(-1,1,-1),monitor_fps*0.2)
                     else:
                         anim_pattern = col_anim(back_color,(1,-1,-1),monitor_fps*0.2)
                     visobjs[acc_pane_names[r][len(accs[r])-1]].fillColor=anim_pattern.copy()
-                                        
+
                     # ISI
                     jitter = jitter_range[0]+np.random.rand()*(jitter_range[1]-jitter_range[0])
                     for f_idx in range(int(monitor_fps*jitter)):
                         self.draw_visobjs(visobjs)
-                        if beamer_idx>-1:
-                            self.draw_visobjs(beamobjs)
-                            beamer.flip()
                         monitor.flip()
                     if "p" in event.getKeys(["p"]):
                         visobjs["status"].text = "Paused"
@@ -356,7 +353,7 @@ class HearTest():
                         visobjs["message"].text = "press p to pause, a to abort"
                         visobjs["message"].color = self.text_color
                     event.clearEvents()
-                
+
                 # assess accuracy and act accordingly
                 accs = np.array(accs)
                 for r_idx in range(accs.shape[0]):
@@ -376,7 +373,7 @@ class HearTest():
                     else: # ambiguous result, just clear acc squares
                         for accp in acc_pane_names[r_idx]:
                             visobjs[accp].fillColor = col_anim(
-                            visobjs[accp].visobj.fillColor,back_color,monitor_fps*0.4) 
+                            visobjs[accp].visobj.fillColor,back_color,monitor_fps*0.4)
                     # update threshold chart
                     ear_thresh = dec2dcb((np.max(swr.data[:,0]),np.max(swr.data[:,1])))
                     visobjs["thresh_left"].pos = pos_anim(visobjs["thresh_left"].visobj.pos,(visobjs["thresh_left"].visobj.pos[0],
@@ -388,13 +385,14 @@ class HearTest():
             for f_idx in range(int(monitor_fps*0.35)):
                 self.draw_visobjs(visobjs)
                 monitor.flip()
-            
+
         # write to file
         if not practice:
             now = datetime.datetime.now()
             Tk().withdraw()
+            Tk().call('wm', 'attributes', '.', '-topmost', True)
             filename = filedialog.asksaveasfilename(filetypes=(("Hearing test files","*.hrt"),("All files","*.*")))
-                
+
             if filename:
                 with open(filename,"w") as file:
                     file.write("Subject {sub}, recorded on {d}.{m}.{y}, {h}:{mi}\n".format(
@@ -402,19 +400,19 @@ class HearTest():
                     file.write("Index\tWavfile\tLeftEar\tRightEar\n")
                     for thrsh in thresh_results:
                         file.write("{idx}\t{name}\t{right}\t{left}\n".format(
-                          idx=thrsh[0],name=thrsh[1],right=thrsh[2],left=thrsh[3]))       
+                          idx=thrsh[0],name=thrsh[1],right=thrsh[2],left=thrsh[3]))
 
         monitor.close()
         if not beamer_idx==-1:  # for some reason closing the beamer crashes it
             beamer.close()
         return thresh_results
 
-class HTestVerkehr():    
+class HTestVerkehr():
     def __init__(self,HTest,PracTest,over_thresh=55,apply_avg_to=[]):
         self.HTest = HTest
         self.PracTest = PracTest
-        self.Threshs = [[s_idx, s, "0", "0"] for s_idx,s in enumerate(HTest.sound_name_list)]        
-        self.over_thresh = over_thresh   
+        self.Threshs = [[s_idx, s, "0", "0"] for s_idx,s in enumerate(HTest.sound_name_list)]
+        self.over_thresh = over_thresh
         self.quit = 0
         self.apply_avg_to=apply_avg_to
     def HTest_callback(self):
@@ -444,7 +442,7 @@ class HTestVerkehr():
         quit_butt.pack(side="left")
         self.master.title("Hearing Test")
         self.master.protocol("WM_DELETE_WINDOW",self.full_quit)
-    
+
     def go(self):
         self.master_init()
         while not self.quit:
@@ -453,17 +451,16 @@ class HTestVerkehr():
             self.master.destroy()
         if self.quit == -1:
             return self.quit
-            
+
         sounds = {}
         incrs = [[],[]]
-        for snd in self.Threshs:      
+        for snd in self.Threshs:
             data = audio_load(snd[1])
             for i_idx in range(2):
-                incr = 0 if float(snd[2+i_idx])+self.over_thresh > 0 else float(snd[2+i_idx])+self.over_thresh            
+                incr = 0 if float(snd[2+i_idx])+self.over_thresh > 0 else float(snd[2+i_idx])+self.over_thresh
                 incrs[i_idx].append(incr)
-                if not self.apply_avg_to:
-                    data[:,i_idx] = incr_dcb(data[:,i_idx],dcb_delta=incr,direction=1)
-                    sounds[snd[1]] = data.copy(order="C")        
+                data[:,i_idx] = incr_dcb(data[:,i_idx],dcb_delta=incr,direction=1)
+                sounds[snd[1]] = data.copy(order="C")
         for snd in self.apply_avg_to:
             data = audio_load(snd)
             for i_idx in range(2):
@@ -471,11 +468,3 @@ class HTestVerkehr():
                 data[:,i_idx] = incr_dcb(data[:,i_idx],dcb_delta=incr,direction=1)
                 sounds[snd] = data.copy(order="C")
         return sounds
-        
-        
-        
-        
-        
-        
-       
-        
