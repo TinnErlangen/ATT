@@ -1,8 +1,8 @@
 from scipy.io import wavfile
 import numpy as np
-from psychopy import visual, prefs, event, core
+from psychopy import prefs
 prefs.hardware["audioLib"] = ["pygame"]
-from psychopy import sound
+from psychopy import sound,visual, event, core
 import datetime
 from tkinter import filedialog
 from tkinter import Tk,Button,mainloop
@@ -47,6 +47,8 @@ def audio_load(sound_name):
     aud_res = nptypes[data.dtype]
     if len(data.shape)==1:
         data = (np.tile(data,(2,1))/aud_res).T
+    else:
+        data = (np.tile(data,(1))/aud_res)
     # 0 values to infinitesimal values for dB log calculations
     data[data==0]=0.00000001
     return data
@@ -455,6 +457,7 @@ class HTestVerkehr():
         sounds = {}
         incrs = [[],[]]
         for snd in self.Threshs:
+            print("hi")
             data = audio_load(snd[1])
             for i_idx in range(2):
                 incr = 0 if float(snd[2+i_idx])+self.over_thresh > 0 else float(snd[2+i_idx])+self.over_thresh
