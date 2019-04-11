@@ -2,7 +2,7 @@ from scipy.io import wavfile
 import numpy as np
 from psychopy import prefs
 prefs.hardware["audioLib"] = ["pygame"]
-from psychopy import sound,visual, event, core
+from psychopy import sound,visual,event,core
 import datetime
 from tkinter import filedialog
 from tkinter import Tk,Button,mainloop
@@ -328,6 +328,9 @@ class HearTest():
                     for f_idx in range(int(monitor_fps*jitter)):
                         self.draw_visobjs(visobjs)
                         monitor.flip()
+                        if beamer_idx > -1:
+                            self.draw_visobjs(beamobjs)
+                            beamer.flip()
                     if "p" in event.getKeys(["p"]):
                         visobjs["status"].text = "Paused"
                         visobjs["status"].color = (1,-1,-1)
