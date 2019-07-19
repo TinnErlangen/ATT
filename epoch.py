@@ -3,8 +3,10 @@ import numpy as np
 
 subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
-         "ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28", "ATT_29"]
-subjs = ['ATT_10']
+         "ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28", "ATT_29", "ATT_29",
+         "ATT_30", "ATT_31", "ATT_32", "ATT_33", "ATT_34", "ATT_35", "ATT_36",
+         "ATT_37"]
+subjs = ["ATT_21"]
 runs = [str(x+1) for x in range(5)]
 #runs = ["1"]
 base_dir ="../"
@@ -15,7 +17,7 @@ epolen = 2
 for sub in subjs:
     epos = []
     for run_idx,run in enumerate(runs):
-        raw = mne.io.Raw("{dir}nc_{sub}_{run}_hand_ica-raw.fif".format(
+        raw = mne.io.Raw("{dir}nc_{sub}_{run}_p_hand_ica-raw.fif".format(
         dir=proc_dir,sub=sub,run=run))
         events = np.load("{dir}nc_{sub}_{run}_events.npy".format(
         dir=proc_dir,sub=sub,run=run))
@@ -67,29 +69,7 @@ for sub in subjs:
             raw.annotations.append(raw.times[focus],epolen,"good")
             focus += samp_step
 
-        reg_events = np.array(reg_events)
+        reg_events = np.sort(np.array(reg_events),axis=0)
         epos.append(mne.Epochs(raw,reg_events,baseline=None,tmin=0,tmax=epolen,
         reject_by_annotation=False))
         epos[-1].load_data()
-
-    # find epo with lowest number of epochs
-    low_epo_idx = np.argmin([len(x) for x in epos[1:]])+1
-    eves = epos[low_epo_idx].events[:,2]%10
-    counts = [np.sum(eves==x) for x in range(1,5)]
-    # make new shuffled epoch objects with same number as the one with lowest
-    new_epos = [epos[0][np.random.permutation(np.arange(
-    len(epos[0])))[:np.sum(counts)]]] # resting state first
-    for e in epos[1:]: # exclude resting state
-        temp_epos = []
-        for c in range(4):
-            idxs = np.where(e.events[:,2]%10==c+1)[0]
-            idxs_perm = np.random.permutation(idxs)[:counts[c]]
-            temp_epos.append(e[idxs_perm])
-        new_epos.append(mne.concatenate_epochs(temp_epos))
-    for ne in new_epos:
-        if ne.events[0,2] == 255:
-            bl_id = 255
-        else:
-            bl_id = ne.events[0,2]-ne.events[0,2]%10
-        cond = block_ids[bl_id]
-        ne.save(proc_dir+"nc_"+sub+"_"+cond+"-epo.fif")

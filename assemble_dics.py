@@ -3,7 +3,7 @@ import numpy as np
 from os import listdir
 import pickle
 
-subjs = ["ATT_10"]
+subjs = ["ATT_21"]
 proc_dir = "../proc/stcs/"
 runs = ["rest","audio","visselten","visual","zaehlen"]
 filelist = listdir(proc_dir)
@@ -26,6 +26,8 @@ for sub in subjs:
         X_std = np.std(X_temp,axis=0)
         X_t = (X_mean*np.sqrt(epo_num))/X_std
         stc.data = X_mean
+        stc.subject = sub
         stc.save("{dir}nc_{a}_{b}_mean".format(dir=proc_dir,a=sub,b=run))
         stc.data = X_t
+        stc.subject = sub
         stc.save("{dir}nc_{a}_{b}_t".format(dir=proc_dir,a=sub,b=run))

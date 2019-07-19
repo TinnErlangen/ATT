@@ -49,7 +49,7 @@ class Cycler():
             start = np.min(epo.events[:,0])
             finish = np.max(epo.events[:,0]) + epo.times[-1]+epo.info["sfreq"]
             psds, freqs = mne.time_frequency.psd_multitaper(epo,fmax=self.fmax,adaptive=True,
-                                                            n_jobs=4)
+                                                            n_jobs=8)
             psd = np.mean(psds,axis=1)
             gen_min = np.min(psd) if np.min(psd)<gen_min else gen_min
             gen_max = np.max(psd) if np.max(psd)>gen_max else gen_max
@@ -79,18 +79,32 @@ class Cycler():
             self.fig, self.axes = plt.subplots(5,1)
             self.draw()
     def save(self):
-        for epo in self.epos:
-            epo.save(epo.filename[:-8]+"_hand-epo.fif")
+        epos = self.epos
+        # find epo with lowest number of epochs
+        low_epo_idx = np.argmin([len(x) for x in epos[1:]])+1
+        eves = epos[low_epo_idx].events[:,2]%10
+        counts = [np.sum(eves==x) for x in range(1,5)]
+        # make new shuffled epoch objects with same number as the one with lowest
+        new_epos = [epos[0][np.sort(np.random.permutation(np.arange(
+        len(epos[0])))[:np.sum(counts)])]] # resting state first
+        for e in epos[1:]: # exclude resting state
+            temp_epos = []
+            for c in range(4):
+                idxs = np.where(e.events[:,2]%10==c+1)[0]
+                idxs_perm = np.sort(np.random.permutation(idxs)[:counts[c]])
+                temp_epos.append(e[idxs_perm])
+            new_epos.append(mne.concatenate_epochs(temp_epos))
+        for ne_idx,ne in enumerate(new_epos):
+            ne.save(epos[ne_idx].filename[:-8]+"_hand-epo.fif")
     def show_file(self):
         print("Current subject: "+self.sub)
-
 
 proc_dir = "../proc/"
 conds  = ["rest", "audio", "visual", "visselten", "zaehlen"]
 subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
-         "ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28", "ATT_29"]
-subjs = ["ATT_10"]
-
-
+         "ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28", "ATT_29",
+         "ATT_30", "ATT_31", "ATT_32", "ATT_33", "ATT_34", "ATT_35", "ATT_36",
+         "ATT_37"]
+subjs = ["ATT_21"]
 cyc = Cycler(subjs,conds,fmax=50)

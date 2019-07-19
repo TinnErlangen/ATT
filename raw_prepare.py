@@ -15,8 +15,10 @@ breadths = np.array([0.25, 2.0, 1.5, 0.5, 0.5, 0.5, 0.5])
 breadths = np.array([1.5, 0.5, 0.5, 0.5, 0.5])
 subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
-         "ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28", "ATT_29"]
-#subjs = ["ATT_10"]
+         "ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28", "ATT_29", "ATT_29",
+         "ATT_30", "ATT_31", "ATT_32", "ATT_33", "ATT_34", "ATT_35", "ATT_36",
+         "ATT_37"]
+subjs = ["ATT_30"]
 runs = [str(x+1) for x in range(5)]
 #runs = ["2"]
 
@@ -60,7 +62,7 @@ for sub in subjs:
         meg_events,meg_resps = eventsresps[:resp_start,],eventsresps[resp_start:,]
 
         # save everything
-        raw.save("{dir}nc_{sub}_{run}-raw.fif".format(
+        raw.save("{dir}nc_{sub}_{run}_p-raw.fif".format(
         dir=proc_dir,sub=sub,run=run), overwrite=True)
         np.save("{dir}nc_{sub}_{run}_events.npy".format(
         dir=proc_dir,sub=sub,run=run),meg_events)

@@ -1,8 +1,9 @@
 import mne
 import matplotlib.pyplot as plt
 import numpy as np
+import pickle
 
-# reduces the pain of finding and removing back ICA components. Analogous to
+# reduces the pain of finding and removing ICA components. Analogous to
 # annot_cycler.py
 
 plt.ion()
@@ -11,22 +12,20 @@ base_dir ="../"
 proc_dir = base_dir+"proc/"
 subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
-         "ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28", "ATT_29"]
-# subjs = ["ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
-#          "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
-#          "ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28", "ATT_29"]
-subjs = ["ATT_10"]
-
+         "ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28", "ATT_29", "ATT_29",
+         "ATT_30", "ATT_31", "ATT_32", "ATT_33", "ATT_34", "ATT_35", "ATT_36",
+         "ATT_37"]
+subjs = ["ATT_11"]
 runs = [str(x+1) for x in range(5)]
-#runs = ["2"]
+runs = ["3"]
 
 filelist = []
 for sub in subjs:
     for run in runs:
-        filelist.append(["{dir}nc_{sub}_{run}_hand-raw.fif".format(dir=proc_dir,sub=sub,run=run),
-        "{dir}nc_{sub}_{run}_hand_ref-ica.fif".format(dir=proc_dir,sub=sub,run=run),
-        "{dir}nc_{sub}_{run}_hand_meg-ica.fif".format(dir=proc_dir,sub=sub,run=run),
-        "{dir}nc_{sub}_{run}_hand-ica.fif".format(dir=proc_dir,sub=sub,run=run)])
+        filelist.append(["{dir}nc_{sub}_{run}_p_hand-raw.fif".format(dir=proc_dir,sub=sub,run=run),
+        "{dir}nc_{sub}_{run}_p_hand_ref-ica.fif".format(dir=proc_dir,sub=sub,run=run),
+        "{dir}nc_{sub}_{run}_p_hand_meg-ica.fif".format(dir=proc_dir,sub=sub,run=run),
+        "{dir}nc_{sub}_{run}_p_hand-ica.fif".format(dir=proc_dir,sub=sub,run=run)])
 
 ref_comp_num = 20
 
@@ -41,15 +40,15 @@ class Cycler():
         # load the next raw/ICA files
         self.fn = self.filelist.pop(idx)
         self.raw = mne.io.Raw(self.fn[0],preload=True)
-        # self.icaref = mne.preprocessing.read_ica(self.fn[1])
-        # self.icameg = mne.preprocessing.read_ica(self.fn[2])
+        self.icaref = mne.preprocessing.read_ica(self.fn[1])
+        self.icameg = mne.preprocessing.read_ica(self.fn[2])
         self.ica = mne.preprocessing.read_ica(self.fn[3])
 
-        # housekeeping on reference components, add them to raw data
-        # refcomps = self.icaref.get_sources(self.raw)
-        # for c in refcomps.ch_names[:self.ref_comp_num]: # they need to have REF_ prefix to be recognised by MNE algorithm
-        #     refcomps.rename_channels({c:"REF_"+c})
-        # self.raw.add_channels([refcomps])
+        #housekeeping on reference components, add them to raw data
+        refcomps = self.icaref.get_sources(self.raw)
+        for c in refcomps.ch_names[:self.ref_comp_num]: # they need to have REF_ prefix to be recognised by MNE algorithm
+            refcomps.rename_channels({c:"REF_"+c})
+        self.raw.add_channels([refcomps])
 
         self.comps = []
 
@@ -59,7 +58,7 @@ class Cycler():
         # self.icameg.plot_sources(self.raw)
         # self.icaref.plot_sources(self.raw, picks = list(range(self.ref_comp_num)))
         # self.raw.plot(n_channels=64,duration=120,scalings="auto")
-        # self.raw.plot_psd(fmax=40)
+        self.raw.plot_psd(fmax=40)
 
     def plot_props(self,props=None):
         # in case you want to take a closer look at a component
@@ -82,7 +81,7 @@ class Cycler():
         test.plot(duration=30,n_channels=30)
         self.test = test
 
-    def identify_bad(self,method,threshold=3):
+    def identify_bad(self,method,threshold=0.5):
         # search for components which correlate with noise
         if isinstance(method,str):
             method = [method]
@@ -91,14 +90,15 @@ class Cycler():
         for meth in method:
             print(meth)
             if meth == "eog":
-                func = self.ica.find_bads_eog
+                inds, scores = self.ica.find_bads_eog(self.raw)
             elif meth == "ecg":
-                func = self.ica.find_bads_ecg
+                inds, scores = self.ica.find_bads_ecg(self.raw)
             elif meth == "ref":
-                func = self.ica.find_bads_ref
+                inds, scores = self.ica.find_bads_ref(self.raw, method="separate",
+                                                      threshold=threshold,
+                                                      bad_measure="cor")
             else:
                 raise ValueError("Unrecognised method.")
-            inds, scores = func(self.raw)
             print(inds)
             if inds:
                 self.ica.plot_scores(scores, exclude=inds)

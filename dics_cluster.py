@@ -6,14 +6,14 @@ from scipy import stats
 import numpy as np
 from mne.stats import permutation_cluster_1samp_test,summarize_clusters_stc
 
-subjs = ["ATT_10"]
+subjs = ["ATT_21"]
 subjects_dir = "/home/jeff/freesurfer/subjects/"
 proc_dir = "../proc/"
 conds = ["audio","rest"]
 threshold = 0.99
 
 for sub in subjs:
-    src = mne.read_source_spaces(proc_dir+"nc_"+sub+"-src.fif")
+    src = mne.read_source_spaces(proc_dir+sub+"-src.fif")
     cnx = mne.spatial_src_connectivity(src)
     filename = proc_dir+"stcs/"+sub
     X = [np.load("{dir}stcs/nc_{a}_{b}_stc.npy".format(dir=proc_dir,a=sub,b=conds[0])),
