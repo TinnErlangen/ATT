@@ -4,7 +4,7 @@ from mne.time_frequency import csd_morlet
 import numpy as np
 
 proc_dir = "../proc/"
-subjs = ["ATT_21"]
+subjs = ["ATT_11","ATT_18","ATT_19","ATT_20","ATT_21","ATT_36"]
 runs = ["rest","audio","visselten","visual","zaehlen"]
 subjects_dir = "/home/jeff/freesurfer/subjects/"
 
@@ -15,6 +15,7 @@ frequencies = np.linspace(fmin, fmax, fmax-fmin+1)
 for sub in subjs:
     l_sens = mne.read_label("{dir}nc_{sub}-lh.label".format(dir=proc_dir, sub=sub))
     r_sens = mne.read_label("{dir}nc_{sub}-rh.label".format(dir=proc_dir, sub=sub))
+    src = mne.read_source_spaces(proc_dir+sub+"-src.fif")
     for run in runs:
         epo_name = "{dir}nc_{sub}_{run}_hand-epo.fif".format(dir=proc_dir, sub=sub, run=run)
         fwd_name = "{dir}nc_{sub}_{run}-fwd.fif".format(dir=proc_dir, sub=sub, run=run)
@@ -31,6 +32,7 @@ for sub in subjs:
             n_jobs=8, n_cycles=7)
             event_csd = event_csd.mean()
             stc = apply_dics_csd(event_csd,filters)
+            stc[0].expand([s["vertno"] for s in src])
             stc[0].subject = sub
             stc[0].save("{a}stcs/nc_{b}_{c}_{d}".format(
                             a=proc_dir, b=sub, c=run, d=event))

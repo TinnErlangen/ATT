@@ -2,11 +2,15 @@ import mne
 import numpy as np
 from mayavi import mlab
 
-subject = "ATT_21"
+mri_key = {"ALC81":"ATT_11","EAM11":"ATT_19","ENR41":"ATT_18","NAG_83":"ATT_36",
+           "PAG48":"ATT_21","SAG13":"ATT_20"}
+sub_key = {v: k for k,v in mri_key.items()}
+
+subject = "ATT_19"
 proc_dir = "../proc/stcs/"
 subjects_dir="/home/jeff/freesurfer/subjects"
 runs = ["rest","audio","visselten","visual","zaehlen"]
-clim = {"kind":"value","lims":[1e-26,3e-26,5.5e-26]}
+clim = {"kind":"percent","pos_lims":[30,75,100]}
 t_mask = 25
 fwd_thresh = 0.35
 smoothing_steps = 3
@@ -15,13 +19,13 @@ smoothing_steps = 3
 fig_idx = 0
 for run in runs:
     stc_m = mne.read_source_estimate("{dir}nc_{a}_{b}_mean-lh.stc".format(dir=proc_dir,a=subject,b=run))
-    stc_m.plot(figure=fig_idx,subjects_dir=subjects_dir,subject=subject,
-    hemi="both", clim=clim, smoothing_steps = smoothing_steps)
+    stc_m.plot(figure=fig_idx,subjects_dir=subjects_dir,subject=sub_key[subject],
+               hemi="both", clim=clim, smoothing_steps = smoothing_steps)
     mlab.title(run + " mean")
     fig_idx += 1
 
     stc_t = mne.read_source_estimate("{dir}nc_{a}_{b}_t-lh.stc".format(dir=proc_dir,a=subject,b=run))
-    stc_t.plot(figure=fig_idx,subjects_dir=subjects_dir,subject=subject,
+    stc_t.plot(figure=fig_idx,subjects_dir=subjects_dir,subject=sub_key[subject],
     hemi="both", clim = {"kind":"value","lims":[0,45,50]}, smoothing_steps = smoothing_steps)
     mlab.title(run + " t")
     fig_idx += 1

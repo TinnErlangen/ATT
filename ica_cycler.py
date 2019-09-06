@@ -10,19 +10,20 @@ plt.ion()
 
 base_dir ="../"
 proc_dir = base_dir+"proc/"
+proc_dir = "/media/hdd/jeff/NEMO_dat/proc/"
 subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
          "ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28", "ATT_29", "ATT_29",
          "ATT_30", "ATT_31", "ATT_32", "ATT_33", "ATT_34", "ATT_35", "ATT_36",
          "ATT_37"]
-subjs = ["ATT_11"]
+subjs = ["NEM_11"]
 runs = [str(x+1) for x in range(5)]
-runs = ["3"]
+runs = ["4"]
 
 filelist = []
 for sub in subjs:
     for run in runs:
-        filelist.append(["{dir}nc_{sub}_{run}_p_hand-raw.fif".format(dir=proc_dir,sub=sub,run=run),
+        filelist.append(["{dir}nc_{sub}_{run}_p-raw.fif".format(dir=proc_dir,sub=sub,run=run),
         "{dir}nc_{sub}_{run}_p_hand_ref-ica.fif".format(dir=proc_dir,sub=sub,run=run),
         "{dir}nc_{sub}_{run}_p_hand_meg-ica.fif".format(dir=proc_dir,sub=sub,run=run),
         "{dir}nc_{sub}_{run}_p_hand-ica.fif".format(dir=proc_dir,sub=sub,run=run)])
@@ -81,7 +82,7 @@ class Cycler():
         test.plot(duration=30,n_channels=30)
         self.test = test
 
-    def identify_bad(self,method,threshold=0.5):
+    def identify_bad(self,method,threshold=3):
         # search for components which correlate with noise
         if isinstance(method,str):
             method = [method]
@@ -95,8 +96,7 @@ class Cycler():
                 inds, scores = self.ica.find_bads_ecg(self.raw)
             elif meth == "ref":
                 inds, scores = self.ica.find_bads_ref(self.raw, method="separate",
-                                                      threshold=threshold,
-                                                      bad_measure="cor")
+                                                      threshold=threshold)
             else:
                 raise ValueError("Unrecognised method.")
             print(inds)

@@ -18,7 +18,7 @@ class ILine:
     def on_click(self, event):
         for l_idx,l in enumerate(self.lines):
             if l.contains(event)[0]:
-                print("Trial {}  Epoch {}".format(self.trial_ids[l_idx+1],self.epo_ids[l_idx]))
+                print("Trial {}  Epoch {}".format(self.trial_ids[l_idx],self.epo_ids[l_idx]))
                 if self.ons[l_idx]:
                     self.ons[l_idx] = False
                     self.lines[l_idx].set_color((0.8,0.8,0.8))
@@ -106,5 +106,5 @@ subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28", "ATT_29",
          "ATT_30", "ATT_31", "ATT_32", "ATT_33", "ATT_34", "ATT_35", "ATT_36",
          "ATT_37"]
-subjs = ["ATT_21"]
+subjs = ["ATT_20"]
 cyc = Cycler(subjs,conds,fmax=50)

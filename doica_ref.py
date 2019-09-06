@@ -40,18 +40,20 @@ subjs = ["ATT_16","ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "A
          "ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28", "ATT_29", "ATT_29",
          "ATT_30", "ATT_31", "ATT_32", "ATT_33", "ATT_34", "ATT_35", "ATT_36",
          "ATT_37"]
+subjs = ["NEM_11"]
 runs = [str(x+1) for x in range(5)]
-#runs = ["1"]
+runs = ["4"]
 
 base_dir ="../"
 proc_dir = base_dir+"proc/"
+proc_dir = "/media/hdd/jeff/NEMO_dat/proc/"
 
 with open("/home/jeff/reftest/bin/compsup1","rb") as f:
     digital_comp = pickle.load(f)["digital"]
 
 for sub in subjs:
     for run_idx,run in enumerate(runs):
-        raw = mne.io.Raw("{dir}nc_{sub}_{run}_p_hand-raw.fif".format(
+        raw = mne.io.Raw("{dir}nc_{sub}_{run}_p-raw.fif".format(
         dir=proc_dir,sub=sub,run=run),preload=True)
 
         # compensate(raw,digital_comp,direction=-1)

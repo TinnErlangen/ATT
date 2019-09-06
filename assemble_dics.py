@@ -3,7 +3,7 @@ import numpy as np
 from os import listdir
 import pickle
 
-subjs = ["ATT_21"]
+subjs = ["ATT_11","ATT_18","ATT_19","ATT_20","ATT_21","ATT_36"]
 proc_dir = "../proc/"
 runs = ["rest","audio","visselten","visual","zaehlen"]
 filelist = listdir(proc_dir+"stcs/")
@@ -11,14 +11,12 @@ filelist = listdir(proc_dir+"stcs/")
 #runs = ["rest"]
 for sub in subjs:
     print("Subject: {a}".format(a=sub))
-    src = mne.read_source_spaces(proc_dir+sub+"-src.fif")
     for run in runs:
         X_temp = []
         epo_num = 0
         filename = "nc_{a}_{b}_{e}-lh.stc".format(a=sub,b=run,e=epo_num)
         while filename in filelist:
             stc = mne.read_source_estimate(proc_dir+"stcs/"+filename)
-            stc = stc.expand([s["vertno"] for s in src])
             X_temp.append(stc.data)
             epo_num += 1
             filename = "nc_{a}_{b}_{e}-lh.stc".format(a=sub,b=run,e=epo_num)
