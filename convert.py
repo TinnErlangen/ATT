@@ -26,6 +26,6 @@ for sub in subjs:
         print(workfile)
         rawmeg = mne.io.read_raw_bti(workfile,preload=True,
                                      rename_channels=False)
-        rawmeg.save("{dir}nc_{s}_{r}-raw.fif".format(dir=proc_dir,s=sub,
-                                                     r=run),
-                                                     overwrite=True)
+        # rawmeg.save("{dir}nc_{s}_{r}-raw.fif".format(dir=proc_dir,s=sub,
+        #                                              r=run),
+        #                                              overwrite=True)

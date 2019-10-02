@@ -1,19 +1,17 @@
 import mne
 import numpy as np
 
-mri_key = {"ALC81":"ATT_11","EAM11":"ATT_19","ENR41":"ATT_18","NAG_83":"ATT_36",
-           "PAG48":"ATT_21","SAG13":"ATT_20","HIU14":"ATT_23","KIL72":"ATT_25",
-           "FOT12":"ATT_28","KOI12":"ATT_16","BLE94":"ATT_29","KER27":"ATT_30",
-           "ATT_27_fsaverage":"ATT_27","DEN59":"ATT_26","WOO07":"ATT_12",
-           "DIU11":"ATT_34","BII41":"ATT_31","Mun79":"ATT_35","BRA52":"ATT_37",
-           "EAM67":"ATT_32","ATT_24_fsaverage":"ATT_24","TGH11":"ATT_14",
-           "FIN23":"ATT_17","GIZ04":"ATT_13"}
-mri_key = {"DEN59":"ATT_26","WOO07":"ATT_12","DIU11":"ATT_34","BII41":"ATT_31",
-           "Mun79":"ATT_35","BRA52":"ATT_37","EAM67":"ATT_32",
-           "ATT_24_fsaverage":"ATT_24","TGH11":"ATT_14","FIN23":"ATT_17",
-           "GIZ04":"ATT_13"}
+mri_key = {"KIL13":"ATT_10","ALC81":"ATT_11","EAM11":"ATT_19","ENR41":"ATT_18",
+           "NAG_83":"ATT_36","PAG48":"ATT_21","SAG13":"ATT_20","HIU14":"ATT_23",
+           "KIL72":"ATT_25","FOT12":"ATT_28","KOI12":"ATT_16","BLE94":"ATT_29",
+           "KER27":"ATT_30","ATT_27_fsaverage":"ATT_27","DEN59":"ATT_26",
+           "WOO07":"ATT_12","DIU11":"ATT_34","BII41":"ATT_31","Mun79":"ATT_35",
+           "ATT_37_fsaverage":"ATT_37","EAM67":"ATT_32","ATT_24_fsaverage":"ATT_24",
+           "TGH11":"ATT_14","FIN23":"ATT_17","GIZ04":"ATT_13","BAI97":"ATT_22",
+           "WAL70":"ATT_33"}
+mri_key = {"ATT_37_fsaverage":"ATT_37"}
 
-#FAO18, WKI71 had a defective (?) MRI and fsaverage was used instead
+#FAO18, WKI71, BRA52 had a defective (?) MRI and fsaverage was used instead
 
 runs = ["rest","audio","visselten","visual","zaehlen"]
 #runs = ["rest"]
