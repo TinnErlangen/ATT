@@ -8,8 +8,8 @@ mri_key = {"KIL13":"ATT_10","ALC81":"ATT_11","EAM11":"ATT_19","ENR41":"ATT_18",
            "WOO07":"ATT_12","DIU11":"ATT_34","BII41":"ATT_31","Mun79":"ATT_35",
            "ATT_37_fsaverage":"ATT_37","EAM67":"ATT_32","ATT_24_fsaverage":"ATT_24",
            "TGH11":"ATT_14","FIN23":"ATT_17","GIZ04":"ATT_13","BAI97":"ATT_22",
-           "WAL70":"ATT_33"}
-mri_key = {"ATT_37_fsaverage":"ATT_37"}
+           "WAL70":"ATT_33","ATT_15_fsaverage":"ATT_15"}
+mri_key = {"KIL13":"ATT_10"}
 
 #FAO18, WKI71, BRA52 had a defective (?) MRI and fsaverage was used instead
 
@@ -27,9 +27,9 @@ for k,v in mri_key.items():
     bem_model = mne.make_bem_model(k, subjects_dir=subjects_dir)
     bem = mne.make_bem_solution(bem_model)
     mne.write_bem_solution("../proc/"+v+"-bem.fif",bem)
-    # src.plot()
-    # mne.viz.plot_bem(subject=k, subjects_dir=subjects_dir,
-    #              brain_surfaces='white', src=src, orientation='coronal')
+    src.plot()
+    mne.viz.plot_bem(subject=k, subjects_dir=subjects_dir,
+                 brain_surfaces='white', src=src, orientation='coronal')
 
     src = mne.read_source_spaces("../proc/"+v+"-src.fif")
     bem = mne.read_bem_solution("../proc/"+v+"-bem.fif")

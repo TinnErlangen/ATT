@@ -16,7 +16,9 @@ proc_dir = "../proc/"
 #all_conds = [["audio","rest"],["visual","rest"],["audio","visual"],["visselten","audio"],["zaehlen","rest"]]
 all_conds = [["visselten","audio"]]
 threshold = 0.99
-avg_clim = {"kind":"percent","pos_lims":[30,75,100]}
+lower = 3e-27
+upper = 3e-26
+avg_clim = {"kind":"value","lims":[lower,(upper-lower)/2,upper]}
 
 for sub in subjs:
     src = mne.read_source_spaces(proc_dir+sub+"-src.fif")
