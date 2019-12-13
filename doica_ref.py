@@ -70,7 +70,7 @@ for sub in subjs:
                                                                   sub=sub,
                                                                   run=run))
 
-        icameg = mne.preprocessing.ICA(n_components=100,max_iter=10000,
+        icameg = mne.preprocessing.ICA(n_components=60,max_iter=10000,
                                        method="picard")
         picks = mne.pick_types(raw.info,meg=True,ref_meg=False)
         icameg.fit(raw,picks=picks)
@@ -78,7 +78,7 @@ for sub in subjs:
                                                                   sub=sub,
                                                                   run=run))
 
-        ica = mne.preprocessing.ICA(n_components=100,max_iter=10000,
+        ica = mne.preprocessing.ICA(n_components=60,max_iter=10000,
                                        method="picard",allow_ref_meg=True)
         picks = mne.pick_types(raw.info,meg=True,ref_meg=True)
         ica.fit(raw,picks=picks)

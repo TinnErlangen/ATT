@@ -5,14 +5,13 @@ import pickle
 
 subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
-         "ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28", "ATT_29", "ATT_29",
-         "ATT_30", "ATT_31", "ATT_32", "ATT_33", "ATT_34", "ATT_35", "ATT_36",
-         "ATT_37"]
+         "ATT_24", "ATT_25", "ATT_26", "ATT_28", "ATT_29", "ATT_29",
+         "ATT_31",  "ATT_33", "ATT_34", "ATT_35", "ATT_36", "ATT_37"]
+# ATT_30/KER27, ATT_27, ATT_32/EAM67   excluded for too much head movement between blocks
 proc_dir = "../proc/"
 runs = ["rest","audio","visselten","visual","zaehlen"]
 filelist = listdir(proc_dir+"stcs/")
 
-#runs = ["rest"]
 for sub in subjs:
     print("Subject: {a}".format(a=sub))
     for run in runs:
@@ -28,10 +27,9 @@ for sub in subjs:
         np.save("{dir}stcs/nc_{a}_{b}_stc.npy".format(dir=proc_dir,a=sub,b=run), X_temp)
         X_mean = np.mean(X_temp,axis=0)
         X_std = np.std(X_temp,axis=0)
-        X_t = (X_mean*np.sqrt(epo_num))/X_std
+        X_t = (X_mean*np.sqrt(epo_num-1))/X_std
         stc.data = X_mean
         stc.subject = sub
         stc.save("{dir}stcs/nc_{a}_{b}_mean".format(dir=proc_dir,a=sub,b=run))
         stc.data = X_t
-        stc.subject = sub
         stc.save("{dir}stcs/nc_{a}_{b}_t".format(dir=proc_dir,a=sub,b=run))

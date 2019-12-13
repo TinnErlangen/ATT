@@ -1,5 +1,6 @@
 import mne
 import matplotlib.pyplot as plt
+plt.ion()
 from mpl_toolkits.mplot3d import Axes3D
 from scipy.spatial import distance_matrix
 from sklearn.metrics.pairwise import cosine_similarity
@@ -57,7 +58,11 @@ for sub_idx,sub in enumerate(subjs):
 
     dist_mat[sub_idx,] = distance_matrix(pos[sub_idx,],pos[sub_idx,])
     cos_mat[sub_idx,] = cosine_similarity(plane_norms[sub_idx,])
+    title = plt.suptitle("{} ({})".format(sub,np.max(dist_mat[sub_idx,])))
     if np.max(dist_mat[sub_idx,]>0.005):
         print("Warning: Subject {} produced a distance of more than 5mm".
               format(sub,run))
+        plt.setp(title,color="red")
+
+
 plt.show()
