@@ -11,16 +11,17 @@ runs = [str(x+1) for x in range(5)]
 #runs = ["1"]
 base_dir ="../"
 proc_dir = base_dir+"proc/"
-
+run_names = ["rest","audio","visselten","visual","zaehlen"]
 epolen = 2
 
 for sub in subjs:
     epos = []
+    block_order = []
     for run_idx,run in enumerate(runs):
         raw = mne.io.Raw("{dir}nc_{sub}_{run}_p_hand_ica-raw.fif".format(
-        dir=proc_dir,sub=sub,run=run))
+          dir=proc_dir,sub=sub,run=run))
         events = np.load("{dir}nc_{sub}_{run}_events.npy".format(
-        dir=proc_dir,sub=sub,run=run))
+          dir=proc_dir,sub=sub,run=run))
         #transform trigger values back to normal
         for x in np.nditer(events[:,1:3], op_flags=["readwrite"]):
             if x > 4000:
@@ -37,6 +38,7 @@ for sub in subjs:
             cond = block_ids[events[0,2]]
         except ValueError:
             print("First trigger doesn't correspond to known block code.")
+        block_order.append(cond)
         # identify where which sounds start
         block_id = events[0,2]
         cond_ids = [0]
@@ -52,7 +54,7 @@ for sub in subjs:
         # get areas where there were artefacts, or no stimuli
         # label X second (var epolen) stretches not marked bad
         ss = mne.annotations._annotations_starts_stops(raw,["bad blink","bad vis","bad aud",
-        "bad nostim"])
+          "bad nostim"])
         reg_events = []
         focus = 0
         annot_idx = 0
@@ -69,7 +71,10 @@ for sub in subjs:
             raw.annotations.append(raw.times[focus],epolen,"good")
             focus += samp_step
 
-        reg_events = np.sort(np.array(reg_events),axis=0)
+        reg_events = np.array(reg_events)
         epos.append(mne.Epochs(raw,reg_events,baseline=None,tmin=0,tmax=epolen,
-        reject_by_annotation=False))
+          reject_by_annotation=False))
         epos[-1].load_data()
+    mne.epochs.equalize_epoch_counts(epos)
+    for b_idx,b in enumerate(block_order):
+        epos[b_idx].save(proc_dir+"nc_"+sub+"_"+b+"-epo.fif",overwrite=True)
