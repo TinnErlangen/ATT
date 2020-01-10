@@ -6,12 +6,13 @@ subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28", "ATT_29", "ATT_29",
          "ATT_30", "ATT_31", "ATT_32", "ATT_33", "ATT_34", "ATT_35", "ATT_36",
          "ATT_37"]
-#subjs = ["ATT_21"]
+subjs = ["ATT_21"]
 runs = [str(x+1) for x in range(5)]
 #runs = ["1"]
 base_dir ="../"
 proc_dir = base_dir+"proc/"
 run_names = ["rest","audio","visselten","visual","zaehlen"]
+wav_names = ["4000fftf","4000Hz","7000Hz","4000cheby"]
 epolen = 2
 
 for sub in subjs:
@@ -70,11 +71,22 @@ for sub in subjs:
             reg_events.append([focus,0,block_id+cond_ids[cond_step]])
             raw.annotations.append(raw.times[focus],epolen,"good")
             focus += samp_step
-
         reg_events = np.array(reg_events)
-        epos.append(mne.Epochs(raw,reg_events,baseline=None,tmin=0,tmax=epolen,
-          reject_by_annotation=False))
-        epos[-1].load_data()
+        if block_id != 255:
+            for idx in range(4):
+                epos.append(mne.Epochs(raw,reg_events,baseline=None,tmin=0,tmax=epolen,
+                  reject_by_annotation=False)[str(block_id+idx+1)])
+                epos[-1].load_data()
+        else:
+            rest_epo = mne.Epochs(raw,reg_events,baseline=None,tmin=0,
+                                  tmax=epolen,reject_by_annotation=False)
+            rest_epo.save("{}nc_{}_{}-epo.fif".format(proc_dir,sub,cond),
+                          overwrite=True)
     mne.epochs.equalize_epoch_counts(epos)
-    for b_idx,b in enumerate(block_order):
-        epos[b_idx].save(proc_dir+"nc_"+sub+"_"+b+"-epo.fif",overwrite=True)
+    idx = 0
+    block_order.remove("rest")
+    for b in block_order:
+        for w in wav_names:
+            epos[idx].save("{}nc_{}_{}_{}-epo.fif".format(proc_dir,sub,
+                           b,w), overwrite=True)
+            idx += 1
