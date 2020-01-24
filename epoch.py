@@ -6,7 +6,7 @@ subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28", "ATT_29", "ATT_29",
          "ATT_30", "ATT_31", "ATT_32", "ATT_33", "ATT_34", "ATT_35", "ATT_36",
          "ATT_37"]
-subjs = ["ATT_21"]
+#subjs = ["ATT_21"]
 runs = [str(x+1) for x in range(5)]
 #runs = ["1"]
 base_dir ="../"
@@ -82,7 +82,7 @@ for sub in subjs:
                                   tmax=epolen,reject_by_annotation=False)
             rest_epo.save("{}nc_{}_{}-epo.fif".format(proc_dir,sub,cond),
                           overwrite=True)
-    mne.epochs.equalize_epoch_counts(epos)
+    #mne.epochs.equalize_epoch_counts(epos)
     idx = 0
     block_order.remove("rest")
     for b in block_order:
