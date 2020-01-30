@@ -8,6 +8,10 @@ from mne.stats import f_mway_rm,summarize_clusters_stc,f_threshold_mway_rm
 import matplotlib.pyplot as plt
 plt.ion()
 
+
+## TODO: Are these conditions labelled correctly?
+
+
 def stat_fun(*args):
     # get f-values only.
     return f_mway_rm(np.swapaxes(args, 1, 0), factor_levels=factor_levels,
@@ -98,7 +102,7 @@ for cond_idx in range(XXX.shape[0]):
     stc_ttemp = stc_temp.copy()
     stc_ttemp.data[:,0] = XXX[cond_idx,].T
     mfig = mlab.figure()
-    mlab.title("condition {}".format(conds[cond_idx]))
+    mlab.title("{}".format(conds[cond_idx]))
     stc_ttemp.plot(hemi="both",figure=mfig,clim={"kind":"value",
                    "lims":[4e-27,6e-27,8e-27]})
 
