@@ -8,10 +8,6 @@ from mne.stats import f_mway_rm,summarize_clusters_stc,f_threshold_mway_rm
 import matplotlib.pyplot as plt
 plt.ion()
 
-
-## TODO: Are these conditions labelled correctly?
-
-
 def stat_fun(*args):
     # get f-values only.
     return f_mway_rm(np.swapaxes(args, 1, 0), factor_levels=factor_levels,
@@ -62,6 +58,7 @@ for sub_idx,sub in enumerate(subjs):
             idx += 1
 
 X = [np.array(x) for x in X]
+X = [np.mean(x,axis=1, keepdims=True) for x in X]
 p_threshold = 0.0005
 effect_idx = 0
 
@@ -79,14 +76,13 @@ try:
                                              stat_fun=stat_fun, n_permutations=perm_num)
     stc_clu = mne.stats.summarize_clusters_stc(clu,subject="fsaverage",
                                                vertices=stc_temp.vertices)
-    fclu = mlab.figure()
     stc_clu.plot(hemi="both",clim=dict(kind='value',
-                 lims=[0,1,7]), time_viewer=True,figure=fclu)
-    with open(proc_dir+"stcs/"+sub+"_clust","wb") as f:
-        pickle.dump(clu,f)
-    masks = [stc_clu.data[:,x] for x in range(1,stc_clu.data.shape[1])]
+                 lims=[0,1,7]), time_viewer=True)
 except:
     print("No significant results.")
+
+#stc_clu = mne.read_source_estimate("{dir}clu.stc".format(dir=proc_dir))
+masks = [stc_clu.data[:,x] for x in range(1,stc_clu.data.shape[1])]
 
 mask = stc_clu.data[:,0]
 mask[mask>0] = 1
@@ -102,9 +98,9 @@ for cond_idx in range(XXX.shape[0]):
     stc_ttemp = stc_temp.copy()
     stc_ttemp.data[:,0] = XXX[cond_idx,].T
     mfig = mlab.figure()
-    mlab.title("{}".format(conds[cond_idx]))
     stc_ttemp.plot(hemi="both",figure=mfig,clim={"kind":"value",
                    "lims":[4e-27,6e-27,8e-27]})
+    mlab.title(conds[cond_idx])
 
 
 avg = XXX[:,mask_inds].mean(axis=1)
