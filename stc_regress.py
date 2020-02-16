@@ -25,7 +25,7 @@ subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
 subjects_dir = "/home/jeff/freesurfer/subjects/"
 proc_dir = "../proc/"
 spacing = "oct6"
-conds = ["audio","visselten","visual","zaehlen"]
+conds = ["audio","visselten","visual"]
 wavs = ["4000Hz","4000cheby","7000Hz","4000fftf"]
 df_laut = pd.read_pickle("../behave/laut")
 df_ang = pd.read_pickle("../behave/ang")
@@ -50,11 +50,19 @@ for sub_idx,sub in enumerate(subjs):
             stcs.append(morph.apply(stc_temp))
 
 df_laut["Intercept"] = 1
+temp_df = []
+for cond in conds:
+    temp_df.append(df_laut[df_laut["Block"]==cond])
+df_laut = pd.concat(temp_df)
 predictor_vars = ["Laut"] + ["Intercept"]
 design_matrix = df_laut.copy()[predictor_vars]
 reg_laut = linear_regression(stcs,design_matrix=design_matrix,names=predictor_vars)
 
 df_ang["Intercept"] = 1
+temp_df = []
+for cond in conds:
+    temp_df.append(df_ang[df_ang["Block"]==cond])
+df_ang = pd.concat(temp_df)
 predictor_vars = ["Angenehm"] + ["Intercept"]
 design_matrix = df_ang.copy()[predictor_vars]
 reg_ang = linear_regression(stcs,design_matrix=design_matrix,names=predictor_vars)

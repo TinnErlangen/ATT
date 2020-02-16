@@ -64,11 +64,11 @@ for sub in subjs:
         stc.subject = sub
         stc.save("{a}stcs/nc_{b}_{c}_{sp}".format(
                         a=proc_dir, b=sub, c=epo_name, sp=spacing))
-        # for event in range(len(epo)):
-        #     event_csd = csd_morlet(epo[event], frequencies=freqs,
-        #                            n_jobs=n_jobs, n_cycles=7, decim=3)
-        #     stc, freqs = apply_dics_csd(event_csd,filters)
-        #     stc.expand([s["vertno"] for s in src])
-        #     stc.subject = sub
-        #     stc.save("{a}stcs/nc_{b}_{c}_{d}".format(
-        #                     a=proc_dir, b=sub, c=runs[epo_idx], d=event))
+        for event in range(len(epo)):
+            event_csd = csd_morlet(epo[event], frequencies=freqs,
+                                   n_jobs=n_jobs, n_cycles=7, decim=3)
+            stc, freqs = apply_dics_csd(event_csd,filters)
+            stc.expand([s["vertno"] for s in src])
+            stc.subject = sub
+            stc.save("{a}stcs/nc_{b}_{c}_{d}_{sp}".format(
+                            a=proc_dir, b=sub, c=epo_name, d=event, sp=spacing))

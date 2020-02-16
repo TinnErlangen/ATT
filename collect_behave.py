@@ -8,7 +8,7 @@ plt.ion()
 
 subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
-         "ATT_24", "ATT_25", "ATT_26", "ATT_28", "ATT_29", "ATT_29",
+         "ATT_24", "ATT_25", "ATT_26", "ATT_28", "ATT_29",
          "ATT_31",  "ATT_33", "ATT_34", "ATT_35", "ATT_36",
          "ATT_37"]
 

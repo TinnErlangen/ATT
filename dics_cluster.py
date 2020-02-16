@@ -31,7 +31,7 @@ subjects_dir = "/home/jeff/freesurfer/subjects/"
 proc_dir = "../proc/"
 spacing = "oct6"
 conds = ["rest","audio","visual","visselten","zaehlen"]
-conds = ["audio","visual","visselten","zaehlen"]
+conds = ["audio","visual","visselten"]
 wavs = ["4000fftf","4000Hz","7000Hz","4000cheby"]
 #conds = ["audio","zaehlen"]
 
@@ -42,10 +42,11 @@ cnx = mne.spatial_src_connectivity(fs_src)
 del fs_src
 for sub_idx,sub in enumerate(subjs):
     src = mne.read_source_spaces("{}{}_{}-src.fif".format(proc_dir,sub, spacing))
+    vertnos=[s["vertno"] for s in src]
     morph = mne.compute_source_morph(src,subject_from=sub_key[sub],
                                      subject_to="fsaverage",
+                                     spacing=vertnos,
                                      subjects_dir=subjects_dir,
-                                     spacing=[s["vertno"] for s in src],
                                      smooth=20)
     idx = 0
     for cond_idx,cond in enumerate(conds):
@@ -90,7 +91,7 @@ mask_inds = np.where(mask)[0]
 
 XX = np.array(X).mean(axis=1).mean(axis=1)
 XXX = []
-for idx in range(0,16,4):
+for idx in range(0,len(conds)*4,4):
     XXX.append(XX[idx:idx+4,].mean(axis=0))
 XXX = np.array(XXX)*mask
 
@@ -98,8 +99,9 @@ for cond_idx in range(XXX.shape[0]):
     stc_ttemp = stc_temp.copy()
     stc_ttemp.data[:,0] = XXX[cond_idx,].T
     mfig = mlab.figure()
-    stc_ttemp.plot(hemi="both",figure=mfig,clim={"kind":"value",
-                   "lims":[4e-27,6e-27,8e-27]})
+    # stc_ttemp.plot(hemi="both",figure=mfig,clim={"kind":"value",
+    #                "lims":[4e-27,6e-27,8e-27]})
+    stc_ttemp.plot(hemi="both",figure=mfig)
     mlab.title(conds[cond_idx])
 
 
