@@ -11,7 +11,7 @@ runs = [str(x+1) for x in range(5)]
 #runs = ["1"]
 base_dir ="../"
 proc_dir = base_dir+"proc/"
-run_names = ["rest","audio","visselten","visual","zaehlen"]
+run_names = ["audio","visselten","visual","zaehlen"]
 wav_names = ["4000fftf","4000Hz","7000Hz","4000cheby"]
 epolen = 2
 

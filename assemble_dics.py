@@ -21,7 +21,7 @@ subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
 subjects_dir = "/home/jeff/freesurfer/subjects/"
 proc_dir = "../proc/"
 runs = ["rest","audio","visselten","visual","zaehlen"]
-runs = ["audio","visselten","visual","zaehlen"]
+runs = ["audio","visselten","visual"]
 wavs = ["4000Hz","4000cheby","7000Hz","4000fftf"]
 filelist = listdir(proc_dir+"stcs/")
 spacing = "oct6"
@@ -50,7 +50,7 @@ for sub in subjs:
                                                               c=wav,e=epo_num,
                                                               sp=spacing)
             X_temp = np.array(X_temp,dtype=np.float64)*1e+27
-            np.save("{dir}stcs/nc_{a}_{b}_{c}_{sp}_stc.npy".format(dir=proc_dir,
+            np.save("{dir}stcs/nc_{a}_{b}_{c}_{sp}.npy".format(dir=proc_dir,
                                                                a=sub,b=run,
                                                                c=wav,
                                                                sp=spacing),
