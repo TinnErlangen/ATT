@@ -16,8 +16,9 @@ wavs = ["4000fftf","4000Hz","7000Hz","4000cheby"]
 subjects_dir = "/home/jeff/freesurfer/subjects/"
 n_jobs = 8
 spacing = "ico5"
-f_range = [7,35]
-frequencies = [list(np.linspace(f_range[0],f_range[1],f_range[1]-f_range[0])) for x in range(5)] 
+f_range = [7,90]
+
+frequencies = [list(np.linspace(fr[0],f_range[1],fr[1]-fr[0])) for x in range(5)]
 with open("peak_freq_table","rb") as f:
     table = pickle.load(f)
 
@@ -57,7 +58,7 @@ for sub in subjs:
         stc.expand([s["vertno"] for s in src])
         stc.subject = sub
         stc.save("{a}stcs/nc_{b}_{c}_{f0}-{f1}Hz_{sp}".format(
-                        a=proc_dir, b=sub, c=epo_name, f0=f_range[0], f1=f_range[1], sp=spacing))
+                        a=proc_dir, b=sub, c=epo_name, f0=fr[0], f1=fr[1], sp=spacing))
         for event in range(len(epo)):
             print(event)
             event_csd = csd_morlet(epo[event], frequencies=freqs,
@@ -67,4 +68,4 @@ for sub in subjs:
             stc.expand([s["vertno"] for s in src])
             stc.subject = sub
             stc.save("{a}stcs/nc_{b}_{c}_{f0}-{f1}Hz_{d}_{sp}".format(
-                            a=proc_dir, b=sub, c=epo_name, f0=f_range[0], f1=f_range[1], d=event, sp=spacing))
+                            a=proc_dir, b=sub, c=epo_name, f0=fr[0], f1=fr[1], d=event, sp=spacing))
