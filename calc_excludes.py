@@ -1,4 +1,8 @@
+import mne
+import numpy as np
+
 spacing = "ico5"
+thresh = 0.25
 proc_dir = "../proc/"
 subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
@@ -6,7 +10,7 @@ subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_33", "ATT_34", "ATT_35", "ATT_36", "ATT_37"]
 
 sens = []
-for sub in subjs
+for sub in subjs:
     sens.append(mne.read_source_estimate(
       "{dir}nc_{sub}_{sp}_sens".format(dir=proc_dir,sub=sub,sp=spacing)))
 

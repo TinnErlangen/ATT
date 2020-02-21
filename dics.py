@@ -16,17 +16,12 @@ wavs = ["4000fftf","4000Hz","7000Hz","4000cheby"]
 subjects_dir = "/home/jeff/freesurfer/subjects/"
 n_jobs = 8
 spacing = "ico5"
-frequencies = [list(np.linspace(5,90,85) for x in range(5)]
+f_range = [7,35]
+frequencies = [list(np.linspace(f_range[0],f_range[1],f_range[1]-f_range[0])) for x in range(5)] 
 with open("peak_freq_table","rb") as f:
     table = pickle.load(f)
 
 for sub in subjs:
-    l_sens = mne.read_label("{dir}nc_{sub}_{sp}-lh.label".format(dir=proc_dir,
-                                                                 sub=sub,
-                                                                 sp=spacing))
-    r_sens = mne.read_label("{dir}nc_{sub}_{sp}-rh.label".format(dir=proc_dir,
-                                                                 sub=sub,
-                                                                 sp=spacing))
     src = mne.read_source_spaces("{dir}{sub}_{sp}-src.fif".format(dir=proc_dir,
                                                                  sub=sub,
                                                                  sp=spacing))
@@ -51,7 +46,7 @@ for sub in subjs:
     fwd_name = "{dir}nc_{sub}_{sp}-fwd.fif".format(dir=proc_dir, sub=sub, sp=spacing)
     fwd = mne.read_forward_solution(fwd_name)
     filters = make_dics(epo.info, fwd, csd, real_filter=True)
-    del epo
+    del epo, csd
 
     print("\n\n")
     print("\n\n")
@@ -61,14 +56,15 @@ for sub in subjs:
         stc, freqs = apply_dics_csd(epo_csd,filters)
         stc.expand([s["vertno"] for s in src])
         stc.subject = sub
-        stc.save("{a}stcs/nc_{b}_{c}_{sp}".format(
-                        a=proc_dir, b=sub, c=epo_name, sp=spacing))
+        stc.save("{a}stcs/nc_{b}_{c}_{f0}-{f1}Hz_{sp}".format(
+                        a=proc_dir, b=sub, c=epo_name, f0=f_range[0], f1=f_range[1], sp=spacing))
         for event in range(len(epo)):
             print(event)
             event_csd = csd_morlet(epo[event], frequencies=freqs,
                                    n_jobs=n_jobs, n_cycles=7, decim=3)
             stc, freqs = apply_dics_csd(event_csd,filters)
+            del event_csd
             stc.expand([s["vertno"] for s in src])
             stc.subject = sub
-            stc.save("{a}stcs/nc_{b}_{c}_{d}_{sp}".format(
-                            a=proc_dir, b=sub, c=epo_name, d=event, sp=spacing))
+            stc.save("{a}stcs/nc_{b}_{c}_{f0}-{f1}Hz_{d}_{sp}".format(
+                            a=proc_dir, b=sub, c=epo_name, f0=f_range[0], f1=f_range[1], d=event, sp=spacing))
