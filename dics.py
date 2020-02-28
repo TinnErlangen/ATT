@@ -17,7 +17,7 @@ subjects_dir = "/home/jeff/freesurfer/subjects/"
 n_jobs = 8
 spacing = "ico5"
 f_ranges = [[7,14],[15,22],[23,30],[31,38]]
-f_ranges = [[39,46],[47,49],[51,58],[59,66]]
+f_ranges = [[39,48],[52,59],[60,67],[68,75]]
 for fr in f_ranges:
     frequencies = [list(np.linspace(fr[0],fr[1],fr[1]-fr[0]+1)) for x in range(5)]
     with open("peak_freq_table","rb") as f:
