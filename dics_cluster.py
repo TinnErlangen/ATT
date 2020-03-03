@@ -30,7 +30,7 @@ subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
 subjects_dir = "/home/jeff/freesurfer/subjects/"
 proc_dir = "../proc/"
 spacing = "ico5"
-f_ranges = [[7,14],[15,22],[23,30],[31,38]]
+f_ranges = [[7,14],[15,22],[23,30],[31,38],[39,48]]
 conds = ["rest","audio","visual","visselten","zaehlen"]
 conds = ["audio","visual","visselten"]
 wavs = ["4000fftf","4000Hz","7000Hz","4000cheby"]
@@ -64,9 +64,7 @@ for sub_idx,sub in enumerate(subjs):
                           d=spacing))
                 stc_temp = morph.apply(stc_temp)
                 X_temp.append(stc_temp.data.transpose(1,0))
-            X_temp = np.array(X_temp)
-            X[idx].append(X_temp.reshape(X_temp.shape[0]*X_temp.shape[1],
-                                         X_temp.shape[2]))
+            X[idx].append(np.vstack(X_temp))
             #stcs.append(stc_temp)
             idx += 1
 X = [(np.array(x)*1e+26).astype(np.float32) for x in X]
@@ -76,19 +74,19 @@ del X_temp, stc_temp, morph, src
 effect_idx = 0
 factor_levels = [len(conds), len(wavs)]
 effects = ["A","B","A:B"]
-perm_num = 1024
+perm_num = 2048
 return_pvals=False
 #threshold = 0.001
 threshold = dict(start=0, step=0.2)
 
 #try:
 f_obs, clusters, cluster_pv, H0 = clu = \
-  mne.stats.spatio_temporal_cluster_test(X,connectivity=cnx,n_jobs=8,
+  mne.stats.spatio_temporal_cluster_test(X,connectivity=cnx,n_jobs=4,
                                          threshold=threshold,
                                          stat_fun=stat_fun,
                                          n_permutations=perm_num,
                                          spatial_exclude=exclude)
-stc_clu = mne.stats.summarize_clusters_stc(clu,subject="fsaverage",p_thresh=0.01)
+stc_clu = mne.stats.summarize_clusters_stc(clu,subject="fsaverage",p_thresh=0.05)
 stc_clu.save("{}stc_clu".format(proc_dir))
 
 # clu_fig = mlab.figure()
