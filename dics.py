@@ -16,9 +16,8 @@ wavs = ["4000fftf","4000Hz","7000Hz","4000cheby"]
 subjects_dir = "/home/jeff/freesurfer/subjects/"
 n_jobs = 8
 spacing = "ico5"
-f_ranges = [[4,7],[8,14],[15,30],[30,48]]
-f_ranges = [[15,24]]
-cycles = [5,7,9,9,9,9,9,9,9]
+f_ranges = [[3,6],[7,12],[13,15],[15,24],[24,48]]
+cycles = [3,7,9,9,9]
 #cycles = [7]
 for fr,cyc in zip(f_ranges,cycles):
     frequencies = [list(np.linspace(fr[0],fr[1],fr[1]-fr[0]+1)) for x in range(5)]
