@@ -27,12 +27,11 @@ class ILine:
                     self.lines[l_idx].set_color(self.cols[l_idx])
 
 class Cycler():
-    def __init__(self,subjs,conds,fmax,subplot,exclude):
+    def __init__(self,subjs,conds,fmax,subplot):
         self.subjs = subjs
         self.conds = conds
         self.fmax = fmax
         self.subplot = subplot
-        self.exclude = exclude
     def go(self):
         self.epos = []
         self.files = []
@@ -82,21 +81,17 @@ class Cycler():
             self.draw()
     def save(self):
         epos = self.epos
-        excl = [epos[x] for x in self.exclude]
-        epos = list(set(epos)-set(excl))
         mne.epochs.equalize_epoch_counts(epos)
         for e_idx,e in enumerate(epos):
-            e.save(epos[e_idx].filename[:-8]+"_hand-epo.fif", overwrite=True)
-        for e_idx,e in enumerate(excl):
             e.save(epos[e_idx].filename[:-8]+"_hand-epo.fif", overwrite=True)
     def show_file(self):
         print("Current subject: "+self.sub)
 
 proc_dir = "../proc/"
-conds  = ["audio", "visual", "visselten", "zaehlen"]
+conds  = ["audio", "visual", "visselten"]
 wavs = ["4000fftf", "4000cheby", "7000Hz", "4000Hz"]
 all_conds = [c+"_"+w for w in wavs for c in conds]
-all_conds += ["rest"]
+#all_conds += ["rest"]
 subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
          "ATT_24", "ATT_25", "ATT_26", "ATT_27", "ATT_28", "ATT_29",
@@ -105,4 +100,4 @@ subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
 # subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
 #          "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
 #          "ATT_24"]
-cyc = Cycler(subjs,all_conds,30,(5,4),[-1])
+cyc = Cycler(subjs,all_conds,30,(3,4))
