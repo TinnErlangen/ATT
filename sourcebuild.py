@@ -16,42 +16,42 @@ sub_key = {v: k for k,v in mri_key.items()}
 # ATT_30/KER27, ATT_27, ATT_32/EAM67   excluded for too much head movement between blocks
 
 runs = ["audio","visselten","visual","zaehlen"]
-#runs = ["rest"]
-subjects_dir = "/home/jeff/freesurfer/subjects/"
-proc_dir = "/home/jeff/ATT_dat/proc/"
+runs = ["audio","visselten","visual"]
+subjects_dir = "/home/jeff/hdd/jeff/freesurfer/subjects/"
+proc_dir = "/home/jeff/hdd/jeff/ATT_dat/proc/"
 thresh = 0.25
 n_jobs = 8
 
 spacing = "ico5"
-
+sens =[]
 for k,v in mri_key.items():
-    trans = "../proc/"+k+"-trans.fif"
-    src = mne.setup_source_space(k,surface="white", spacing=spacing,subjects_dir=subjects_dir,n_jobs=n_jobs)
-    src.save("{}{}_{}-src.fif".format(proc_dir, v, spacing), overwrite=True)
-    bem_model = mne.make_bem_model(k, subjects_dir=subjects_dir)
-    bem = mne.make_bem_solution(bem_model)
-    mne.write_bem_solution("{}{}_{}-bem.fif".format(proc_dir, v, spacing),bem)
-    src = mne.read_source_spaces("{}{}_{}-src.fif".format(proc_dir, v, spacing))
-    bem = mne.read_bem_solution("{}{}_{}-bem.fif".format(proc_dir, v, spacing))
-    for run in runs:
-        epo = mne.read_epochs("{dir}nc_{sub}_{run}_4000Hz-epo.fif".format(
-                              dir=proc_dir,sub=v,run=run))
-        fwd = mne.make_forward_solution(epo.info, trans=trans, src=src, bem=bem,
-                                        meg=True, mindist=5.0, n_jobs=n_jobs)
-        mne.write_forward_solution("{dir}nc_{sub}_{run}_{spacing}-fwd.fif".format(
-                                   dir=proc_dir,sub=v,run=run,spacing=spacing),
-                                   fwd,overwrite=True)
-    del src, bem, fwd
-    fwds = []
-    for run in runs:
-        fwds.append(mne.read_forward_solution(
-          "{dir}nc_{sub}_{run}_{spacing}-fwd.fif".format(dir=proc_dir, sub=v,
-          run=run,spacing=spacing)))
-    avg_fwd = mne.average_forward_solutions(fwds)
-    del fwds
-    mne.write_forward_solution("{dir}nc_{sub}_{spacing}-fwd.fif".format(
-                               dir=proc_dir,sub=v,spacing=spacing), avg_fwd,
-                               overwrite=True)
+    # trans = "../proc/"+k+"-trans.fif"
+    # # src = mne.setup_source_space(k,surface="white", spacing=spacing,subjects_dir=subjects_dir,n_jobs=n_jobs)
+    # # src.save("{}{}_{}-src.fif".format(proc_dir, v, spacing), overwrite=True)
+    # # bem_model = mne.make_bem_model(k, subjects_dir=subjects_dir)
+    # # bem = mne.make_bem_solution(bem_model)
+    # # mne.write_bem_solution("{}{}_{}-bem.fif".format(proc_dir, v, spacing),bem)
+    # src = mne.read_source_spaces("{}{}_{}-src.fif".format(proc_dir, v, spacing))
+    # bem = mne.read_bem_solution("{}{}_{}-bem.fif".format(proc_dir, v, spacing))
+    # for run in runs:
+    #     epo = mne.read_epochs("{dir}nc_{sub}_{run}_4000Hz_hand-epo.fif".format(
+    #                           dir=proc_dir,sub=v,run=run))
+    #     fwd = mne.make_forward_solution(epo.info, trans=trans, src=src, bem=bem,
+    #                                     meg=True, mindist=5.0, n_jobs=n_jobs)
+    #     mne.write_forward_solution("{dir}nc_{sub}_{run}_{spacing}-fwd.fif".format(
+    #                                dir=proc_dir,sub=v,run=run,spacing=spacing),
+    #                                fwd,overwrite=True)
+    # del src, bem, fwd
+    # fwds = []
+    # for run in runs:
+    #     fwds.append(mne.read_forward_solution(
+    #       "{dir}nc_{sub}_{run}_{spacing}-fwd.fif".format(dir=proc_dir, sub=v,
+    #       run=run,spacing=spacing)))
+    # avg_fwd = mne.average_forward_solutions(fwds)
+    # del fwds
+    # mne.write_forward_solution("{dir}nc_{sub}_{spacing}-fwd.fif".format(
+    #                            dir=proc_dir,sub=v,spacing=spacing), avg_fwd,
+    #                            overwrite=True)
     avg_fwd = mne.read_forward_solution("{dir}nc_{sub}_{spacing}-fwd.fif".format(dir=proc_dir, sub=v, spacing=spacing))
     sen = mne.sensitivity_map(avg_fwd,ch_type="mag",mode="fixed")
     m_to_fs = mne.compute_source_morph(sen,subject_from=k,
@@ -59,13 +59,14 @@ for k,v in mri_key.items():
                                        subjects_dir=subjects_dir,
                                        smooth=None)
     sen = m_to_fs.apply(sen)
+    sens.append(sen)
     sen.save("{dir}nc_{sub}_{sp}_sens".format(dir=proc_dir,sub=v,sp=spacing))
 
-# sen = sens[0].copy()
-# for s in sens[1:]:
-#     sen.data += s.data
-# sen.data /= len(sens)
-# sen.data[sen.data<thresh] = 0
-# sen.data[sen.data>=thresh] = 1
-# exclude = np.where(sen.data==0)[0]
-# np.save("{}fsaverage_exclude.npy".format(proc_dir),exclude)
+sen = sens[0].copy()
+for s in sens[1:]:
+    sen.data += s.data
+sen.data /= len(sens)
+sen.data[sen.data<thresh] = 0
+sen.data[sen.data>=thresh] = 1
+exclude = np.where(sen.data==0)[0]
+np.save("{}fsaverage_exclude.npy".format(proc_dir),exclude)
