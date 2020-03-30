@@ -66,7 +66,7 @@ n_jobs = 8
 spacing="ico5"
 freqs = [list(np.arange(4,7)),list(np.arange(8,13)),list(np.arange(13,31)),
          list(np.arange(31,61))]
-cycles = [2,[2,2,3,3,3],[4,4,4,5,5,5,5,5,6,6,6,7,7,7,7,7,7,7],9]
+cycles = [3,5,7,9]
 cyc_names = ["theta","alpha","beta","gamma"]
 cov = mne.read_cov("{}empty-cov.fif".format(proc_dir))
 fs_labels = mne.read_labels_from_annot("fsaverage", "aparc_sub",
@@ -102,7 +102,7 @@ for sub in subjs:
             dPTE,rPTE = zip(*results)
             del rPTE, results, phase
             dPTE = TriuSparse(np.array(dPTE))
-            dPTE.save("{dir}nc_{sub}_{run}_dPTE_{cn}.npy".format(dir=proc_dir,
+            dPTE.save("{dir}nc_{sub}_{run}_dPTE_{cn}.sps".format(dir=proc_dir,
                                                                sub=sub,
                                                                run=run,
                                                                cn=cn))
