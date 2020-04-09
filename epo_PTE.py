@@ -41,11 +41,16 @@ def do_PTE(data):
     return compute_dPTE_rawPTE(d_phase, delay)
 
 proc_dir = "../proc/"
-subjects_dir = "/home/jeff/hdd/jeff/freesurfer/subjects/"
+subjects_dir = "/home/jeff/freesurfer/subjects/"
 subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
          "ATT_24", "ATT_25", "ATT_26", "ATT_28", "ATT_29", "ATT_31",
          "ATT_33", "ATT_34", "ATT_35", "ATT_36", "ATT_37"]
+subjs = ["ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
+         "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
+         "ATT_24", "ATT_25", "ATT_26", "ATT_28", "ATT_29", "ATT_31",
+         "ATT_33", "ATT_34", "ATT_35", "ATT_36", "ATT_37"]
+
 # ATT_30/KER27, ATT_27, ATT_32/EAM67   excluded for too much head movement between blocks
 mri_key = {"KIL13":"ATT_10","ALC81":"ATT_11","EAM11":"ATT_19","ENR41":"ATT_18",
            "NAG_83":"ATT_36","PAG48":"ATT_21","SAG13":"ATT_20","HIU14":"ATT_23",
@@ -62,10 +67,10 @@ wavs = ["4000fftf","4000Hz","7000Hz","4000cheby"]
 inv_method="sLORETA"
 snr = 1.0
 lambda2 = 1.0 / snr ** 2
-n_jobs = 8
+n_jobs = 4
 spacing="ico5"
 freqs = [list(np.arange(4,7)),list(np.arange(8,13)),list(np.arange(13,31)),
-         list(np.arange(31,61))]
+         list(np.linspace(31,60,18))]
 cycles = [3,5,7,9]
 cyc_names = ["theta","alpha","beta","gamma"]
 cov = mne.read_cov("{}empty-cov.fif".format(proc_dir))
@@ -87,6 +92,7 @@ for sub in subjs:
             temp_epo.interpolate_bads()
             epos.append(temp_epo)
         epo = mne.concatenate_epochs(epos)
+        del epos
         inv_op = mne.minimum_norm.make_inverse_operator(epo.info,fwd,cov)
         stcs = mne.minimum_norm.apply_inverse_epochs(epo,inv_op,lambda2,
                                                     method=inv_method,
