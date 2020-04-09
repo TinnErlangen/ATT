@@ -86,11 +86,12 @@ class Cycler():
             ax.set_ylim(gen_min,gen_max/2)
 
     def save(self):
+        freqs = self.linemarkers.get_freqs()
+        for sub,f in zip(self.subjs,freqs):
+            self.table[sub] = f
         with open("peak_freq_table","wb") as f:
             pickle.dump(self.table,f)
 
-    def show_file(self):
-        print("Current subject: "+self.sub)
 
 proc_dir = "../proc/"
 conds  = ["audio", "visual", "visselten"]
@@ -101,5 +102,5 @@ subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_31",  "ATT_33", "ATT_34", "ATT_35", "ATT_36",
          "ATT_37"]
 
-# ATT_33,29,18 had no peak except a very high, low frequency
+# ATT_33,18 had no peak except a very high, low frequency
 cyc = Cycler(subjs,conds,wavs,fmax=40,f_range=(6,15))

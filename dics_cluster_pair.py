@@ -22,21 +22,23 @@ subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_24", "ATT_25", "ATT_26", "ATT_28", "ATT_29", "ATT_31",
          "ATT_33", "ATT_34", "ATT_35", "ATT_36", "ATT_37"]
 
-subjects_dir = "/home/jeff/freesurfer/subjects/"
+subjects_dir = "/home/jeff/hdd/jeff/freesurfer/subjects/"
 proc_dir = "../proc/"
 spacing = "ico5"
-f_ranges = [[4,7],[8,14],[15,30],[30,48]]
-f_ranges = [[8,14]]
-conds = ["audio","visual","visselten"]
+n_jobs=16
+f_ranges = [[3,7],[8,12],[13,15],[15,24],[24,48]]
+f_ranges = [[3,7],[13,15],[15,24],[24,48]]
+f_ranges = [[7,14]]
 conds = ["audio","visual"]
-perm_num = 2048
+perm_num = 512
 return_pvals=False
-threshold = stats.distributions.t.ppf(0.95, len(subjs)-1)
-#threshold = dict(start=0, step=0.2)
+p = 0.05
+threshold = stats.distributions.t.ppf(1-p, len(subjs)-1)
+threshold = dict(start=0, step=0.2)
 cond_str = conds[0]
 for c in conds[1:]:
     cond_str += "_" + c
-thresh_str = "tfce" if isinstance(threshold,dict) else threshold
+thresh_str = "tfce" if isinstance(threshold,dict) else p
 
 # get connectivity
 fs_src = mne.read_source_spaces("{}{}_{}-src.fif".format(proc_dir,"fsaverage",                                                         spacing))
@@ -68,17 +70,18 @@ for fr in f_ranges:
             idx += 1
     X = [(np.array(x)*1e+26).astype(np.float32) for x in X]
     del X_temp, morph, src
+    #XX = (X[1] - X[2]) / (X[0] + 1e-8)
     XX = X[0] - X[1]
 
-
-
     t_obs, clusters, cluster_pv, H0 = clu = \
-      mne.stats.spatio_temporal_cluster_1samp_test(XX,connectivity=cnx,n_jobs=4,
-                                                    threshold=threshold,
-                                                    n_permutations=perm_num,
-                                                    spatial_exclude=exclude)
+      mne.stats.spatio_temporal_cluster_1samp_test(XX,connectivity=cnx,n_jobs=n_jobs,
+                                                   threshold=threshold,
+                                                   n_permutations=perm_num,
+                                                   spatial_exclude=exclude)
     raw_t = stc_temp.copy()
-    raw_t.data = t_obs.T
+    sign = np.sign(XX[:,:].mean(axis=0))
+    raw_t.data = (t_obs * sign).T
+    raw_t.save("{}rawstat_{}-{}Hz_{}".format(proc_dir, fr[0], fr[1], cond_str))
     with open("{}clu_{}-{}Hz_{}_{}".format(proc_dir, fr[0], fr[1], cond_str, thresh_str),"wb") as f:
         pickle.dump(clu,f)
     try:

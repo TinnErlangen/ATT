@@ -91,7 +91,7 @@ for sub in subjs:
         stcs = mne.minimum_norm.apply_inverse_epochs(epo,inv_op,lambda2,
                                                     method=inv_method,
                                                     pick_ori="normal")
-        l_arr = [s.extract_label_time_course(labels,src,mode="pca_flip") for s in stcs]
+        l_arr = [s.extract_label_time_course(labels,src,mode="pca_flip").astype(float32) for s in stcs]
         l_arr = np.array(l_arr)
 
         for f,c,cn in zip(freqs,cycles,cyc_names):
