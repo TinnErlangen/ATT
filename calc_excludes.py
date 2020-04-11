@@ -1,7 +1,7 @@
 import mne
 import numpy as np
 
-spacing = "ico5"
+spacing = "ico4"
 thresh = 0.25
 proc_dir = "../proc/"
 subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
@@ -21,4 +21,4 @@ sen.data /= len(sens)
 sen.data[sen.data<thresh] = 0
 sen.data[sen.data>=thresh] = 1
 exclude = np.where(sen.data==0)[0]
-np.save("{}fsaverage_exclude.npy".format(proc_dir),exclude)
+np.save("{}fsaverage_{}_exclude.npy".format(proc_dir, spacing),exclude)

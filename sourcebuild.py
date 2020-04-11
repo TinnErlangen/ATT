@@ -22,15 +22,15 @@ proc_dir = "/home/jeff/hdd/jeff/ATT_dat/proc/"
 thresh = 0.25
 n_jobs = 8
 
-spacing = "ico5"
+spacing = "ico4"
 sens =[]
 for k,v in mri_key.items():
     # trans = "../proc/"+k+"-trans.fif"
-    # # src = mne.setup_source_space(k,surface="white", spacing=spacing,subjects_dir=subjects_dir,n_jobs=n_jobs)
-    # # src.save("{}{}_{}-src.fif".format(proc_dir, v, spacing), overwrite=True)
-    # # bem_model = mne.make_bem_model(k, subjects_dir=subjects_dir)
-    # # bem = mne.make_bem_solution(bem_model)
-    # # mne.write_bem_solution("{}{}_{}-bem.fif".format(proc_dir, v, spacing),bem)
+    # src = mne.setup_source_space(k,surface="white", spacing=spacing,subjects_dir=subjects_dir,n_jobs=n_jobs)
+    # src.save("{}{}_{}-src.fif".format(proc_dir, v, spacing), overwrite=True)
+    # bem_model = mne.make_bem_model(k, subjects_dir=subjects_dir)
+    # bem = mne.make_bem_solution(bem_model)
+    # mne.write_bem_solution("{}{}_{}-bem.fif".format(proc_dir, v, spacing),bem)
     # src = mne.read_source_spaces("{}{}_{}-src.fif".format(proc_dir, v, spacing))
     # bem = mne.read_bem_solution("{}{}_{}-bem.fif".format(proc_dir, v, spacing))
     # for run in runs:
@@ -56,6 +56,7 @@ for k,v in mri_key.items():
     sen = mne.sensitivity_map(avg_fwd,ch_type="mag",mode="fixed")
     m_to_fs = mne.compute_source_morph(sen,subject_from=k,
                                        subject_to="fsaverage",
+                                       spacing=int(spacing[-1]),
                                        subjects_dir=subjects_dir,
                                        smooth=None)
     sen = m_to_fs.apply(sen)
@@ -69,4 +70,4 @@ sen.data /= len(sens)
 sen.data[sen.data<thresh] = 0
 sen.data[sen.data>=thresh] = 1
 exclude = np.where(sen.data==0)[0]
-np.save("{}fsaverage_exclude.npy".format(proc_dir),exclude)
+np.save("{}fsaverage_{}_exclude.npy".format(proc_dir, spacing),exclude)

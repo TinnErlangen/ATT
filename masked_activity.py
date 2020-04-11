@@ -23,35 +23,37 @@ subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_31",  "ATT_33", "ATT_34", "ATT_35", "ATT_36",
          "ATT_37"]
 
-subjects_dir = "/home/jeff/freesurfer/subjects/"
+subjects_dir = "/home/jeff/hdd/jeff/freesurfer/subjects/"
 proc_dir = "../proc/"
+stat_dir = "broad/"
 spacing = "ico5"
-conds = ["audio","visual","visselten"]
-conds = ["visual","visselten"]
+conds = ["audio", "visual", "visselten"]
+#conds = ["visual","visselten"]
 cond_str = conds[0]
 for c in conds[1:]:
     cond_str += "_" + c
 thresh_str = "tfce"
 
 # get connectivity
-fs_src = mne.read_source_spaces("{}{}_{}-src.fif".format(proc_dir,"fsaverage",                                                         spacing))
+fs_src = mne.read_source_spaces("{}{}_{}-src.fif".format(proc_dir, "fsaverage",
+                                                         spacing))
 cnx = mne.spatial_src_connectivity(fs_src)
 
-f_ranges = [[4,7],[8,14],[15,30],[30,48]]
-f_ranges = [[7,12]]
+f_ranges = [[7,14]]
 for fr in f_ranges:
     ###### first get our clusters/masks
-    clu_stc = mne.read_source_estimate("{}stc_clu_{}-{}Hz_{}_{}-lh.stc".format(
-                                      proc_dir, fr[0], fr[1], cond_str,
-                                      thresh_str))
+    clu_stc = mne.read_source_estimate("{}{}stc_clu_{}-{}Hz_{}_{}-lh.stc".format(
+                                       proc_dir, stat_dir, fr[0], fr[1], cond_str,
+                                       thresh_str))
     clu_stc.subject = "fsaverage"
-    with open("{}clu_{}-{}Hz_{}_{}".format(proc_dir, fr[0], fr[1], cond_str,
-                                              thresh_str),"rb") as f:
+    with open("{}{}clu_{}-{}Hz_{}_{}".format(proc_dir, stat_dir, fr[0], fr[1], cond_str,
+                                             thresh_str),"rb") as f:
         clu = pickle.load(f)
-    meta_clusts = _find_clusters(clu_stc.data[:,0],1e-8,connectivity=cnx)[0]
+    stc_clu = mne.stats.summarize_clusters_stc(clu,subject="fsaverage",p_thresh=0.085)
+    meta_clusts = _find_clusters(stc_clu.data[:,0],1e-8,connectivity=cnx)[0]
     clust_labels = []
     for mc in meta_clusts:
-        temp_stc = clu_stc.copy()
+        temp_stc = stc_clu.copy()
         temp_stc.data[:] = np.zeros((temp_stc.data.shape[0],1))
         temp_stc.data[mc,0] = 1
         lab = [x for x in mne.stc_to_label(temp_stc,src=fs_src) if x][0]

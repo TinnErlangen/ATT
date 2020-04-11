@@ -4,7 +4,7 @@ import pickle
 from mne.time_frequency import csd_morlet
 import numpy as np
 
-doTones = False
+doTones = True
 proc_dir = "../proc/"
 subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_17", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
@@ -17,7 +17,7 @@ subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
 runs = ["audio","visselten","visual"]
 wavs = ["4000fftf","4000Hz","7000Hz","4000cheby"]
 subjects_dir = "/home/jeff/freesurfer/subjects/"
-n_jobs = 16
+n_jobs = 4
 spacing = "ico5"
 cycles = 7
 with open("peak_alpha_freq_table","rb") as f:
@@ -52,7 +52,7 @@ for sub in subjs:
         x.info["dev_head_t"] = epos[0].info["dev_head_t"]
     epo = mne.concatenate_epochs(epos)
     csd = csd_morlet(epo, frequencies=freqs, n_jobs=n_jobs, n_cycles=cycles, decim=3)
-    #csd = csd.mean()
+    csd = csd.mean()
     fwd_name = "{dir}nc_{sub}_{sp}-fwd.fif".format(dir=proc_dir, sub=sub, sp=spacing)
     fwd = mne.read_forward_solution(fwd_name)
     filters = make_dics(epo.info, fwd, csd, real_filter=True)
@@ -66,7 +66,7 @@ for sub in subjs:
     for epo,epo_name in zip(epos,epo_names):
         epo_csd = csd_morlet(epo, frequencies=freqs,
                                n_jobs=n_jobs, n_cycles=cycles, decim=3)
-        #epo_csd = epo_csd.mean()
+        epo_csd = epo_csd.mean()
         stc, freqs = apply_dics_csd(epo_csd,filters)
         stc.expand([s["vertno"] for s in src])
         stc.subject = sub

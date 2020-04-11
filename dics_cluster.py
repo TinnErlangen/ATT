@@ -19,26 +19,32 @@ mri_key = {"KIL13":"ATT_10","ALC81":"ATT_11","EAM11":"ATT_19","ENR41":"ATT_18",
            "ATT_15_fsaverage":"ATT_15"}
 sub_key = {v: k for k,v in mri_key.items()}
 
+# all subjs
 subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
          "ATT_24", "ATT_25", "ATT_26", "ATT_28", "ATT_29", "ATT_31", "ATT_33",
          "ATT_34", "ATT_35", "ATT_36", "ATT_37"]
+# exclude 18 and 33 because of no alpha peak
+subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
+         "ATT_17", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
+         "ATT_24", "ATT_25", "ATT_26", "ATT_28", "ATT_29", "ATT_31",
+         "ATT_34", "ATT_35", "ATT_36", "ATT_37"]
 
 subjects_dir = "/home/jeff/hdd/jeff/freesurfer/subjects/"
 proc_dir = "../proc/"
-spacing = "ico5"
+spacing = 4
 n_jobs = 4
-f_ranges = [[7,14]]
+f_ranges = [[4,30]]
 #f_ranges = ["alpha"]
-conds = ["visselten","audio"]
+conds = ["audio", "visual", "visselten"]
 #conds = ["audio","visual"]
 wavs = ["4000fftf","4000Hz","7000Hz","4000cheby"]
-effect_idx = 0
+effect_idx = 2
 factor_levels = [len(conds), len(wavs)]
 #factor_levels = [len(conds)]
 effects = ["A","B","A:B"]
 #effects = ["A"]
-perm_num = 1024
+perm_num = 2048
 return_pvals=False
 p_thresh = 0.01
 threshold = f_threshold_mway_rm(len(subjs), [3,4], effects[effect_idx], p_thresh)
@@ -61,20 +67,20 @@ else:
 
 
 # get connectivity
-fs_src = mne.read_source_spaces("{}{}_{}-src.fif".format(proc_dir,"fsaverage",                                                         spacing))
+fs_src = mne.read_source_spaces("{}{}_ico{}-src.fif".format(proc_dir,"fsaverage", spacing))
 cnx = mne.spatial_src_connectivity(fs_src)
 del fs_src
-exclude = np.load("{}fsaverage_exclude.npy".format(proc_dir))
+exclude = np.load("{}fsaverage_ico{}_exclude.npy".format(proc_dir,spacing))
 
 for fr in f_ranges:
     X = [[] for wav in wavs for cond in conds]
     #X = [[] for cond in conds]
     for sub_idx,sub in enumerate(subjs):
-        src = mne.read_source_spaces("{}{}_{}-src.fif".format(proc_dir,sub,spacing))
+        src = mne.read_source_spaces("{}{}_ico{}-src.fif".format(proc_dir,sub,spacing))
         vertnos=[s["vertno"] for s in src]
         morph = mne.compute_source_morph(src,subject_from=sub_key[sub],
                                          subject_to="fsaverage",
-                                         spacing=5,
+                                         spacing=spacing,
                                          subjects_dir=subjects_dir,
                                          smooth=None)
 
@@ -84,12 +90,12 @@ for fr in f_ranges:
                 X_temp = []
                 if isinstance(fr,list):
                     stc_temp = mne.read_source_estimate(
-                      "{dir}stcs/nc_{a}_{b}_{c}_{f0}-{f1}Hz_{d}-lh.stc".format(
+                      "{dir}stcs/nc_{a}_{b}_{c}_{f0}-{f1}Hz_ico{d}-lh.stc".format(
                        dir=proc_dir,a=sub,b=cond,c=wav,f0=fr[0],f1=fr[1],
                        d=spacing))
                 elif isinstance(fr,str):
                     stc_temp = mne.read_source_estimate(
-                      "{dir}stcs/nc_{a}_{b}_{c}_{d}_{e}-lh.stc".format(
+                      "{dir}stcs/nc_{a}_{b}_{c}_{d}_ico{e}-lh.stc".format(
                        dir=proc_dir,a=sub,b=cond,c=wav, d=fr,
                        e=spacing))
                 stc_temp = morph.apply(stc_temp)
@@ -114,7 +120,9 @@ for fr in f_ranges:
                                                   thresh_str, effects[effect_idx]),"wb") as f:
             pickle.dump(clu,f)
         try:
-            stc_clu = mne.stats.summarize_clusters_stc(clu,subject="fsaverage",p_thresh=0.05)
+            stc_clu = mne.stats.summarize_clusters_stc(clu,subject="fsaverage",
+                                                       p_thresh=0.05,
+                                                       vertices=raw_f.vertices)
             stc_clu.save("{}stc_clu_{}-{}Hz_{}_{}_{}".format(proc_dir, fr[0], fr[1],
                                                              cond_str,
                                                              thresh_str,
