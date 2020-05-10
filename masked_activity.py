@@ -25,9 +25,10 @@ subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
 
 subjects_dir = "/home/jeff/hdd/jeff/freesurfer/subjects/"
 proc_dir = "../proc/"
-stat_dir = "broad/"
-spacing = "ico5"
+stat_dir = "superanova_1/"
+spacing = "ico4"
 conds = ["audio", "visual", "visselten"]
+wavs = ["4000fftf","4000Hz","7000Hz","4000cheby"]
 #conds = ["visual","visselten"]
 cond_str = conds[0]
 for c in conds[1:]:
@@ -39,50 +40,64 @@ fs_src = mne.read_source_spaces("{}{}_{}-src.fif".format(proc_dir, "fsaverage",
                                                          spacing))
 cnx = mne.spatial_src_connectivity(fs_src)
 
-f_ranges = [[7,14]]
-for fr in f_ranges:
-    ###### first get our clusters/masks
-    clu_stc = mne.read_source_estimate("{}{}stc_clu_{}-{}Hz_{}_{}-lh.stc".format(
-                                       proc_dir, stat_dir, fr[0], fr[1], cond_str,
-                                       thresh_str))
-    clu_stc.subject = "fsaverage"
-    with open("{}{}clu_{}-{}Hz_{}_{}".format(proc_dir, stat_dir, fr[0], fr[1], cond_str,
-                                             thresh_str),"rb") as f:
-        clu = pickle.load(f)
-    stc_clu = mne.stats.summarize_clusters_stc(clu,subject="fsaverage",p_thresh=0.085)
-    meta_clusts = _find_clusters(stc_clu.data[:,0],1e-8,connectivity=cnx)[0]
-    clust_labels = []
-    for mc in meta_clusts:
-        temp_stc = stc_clu.copy()
-        temp_stc.data[:] = np.zeros((temp_stc.data.shape[0],1))
-        temp_stc.data[mc,0] = 1
-        lab = [x for x in mne.stc_to_label(temp_stc,src=fs_src) if x][0]
-        clust_labels.append(lab)
 
-    X = np.zeros((len(subjs),len(clust_labels),len(conds)))
-    for sub_idx,sub in enumerate(subjs):
-        src = mne.read_source_spaces("{}{}_{}-src.fif".format(proc_dir,sub,spacing))
-        vertnos=[s["vertno"] for s in src]
-        morph = mne.compute_source_morph(src,subject_from=sub_key[sub],
-                                         subject_to="fsaverage",
-                                         spacing=5,
-                                         subjects_dir=subjects_dir,
-                                         smooth=None)
+fr = [4,30]
+frange = list(np.arange(fr[0],fr[1]+1))
+f_subs = [[0,3],[7,26]]
+###### first get our clusters/masks
+stc_clu = mne.read_source_estimate("{}{}stc_clu_{}-{}Hz_{}_{}_A-lh.stc".format(
+                                   proc_dir, stat_dir, fr[0], fr[1], cond_str,
+                                   thresh_str))
+stc_clu.subject = "fsaverage"
+with open("{}{}clu_{}-{}Hz_{}_{}_A".format(proc_dir, stat_dir, fr[0], fr[1], cond_str,
+                                         thresh_str),"rb") as f:
+    f_obs, clusters, cluster_pv, H0 = pickle.load(f)
+f_thresh = np.quantile(H0,0.95)
+# stc_clu = mne.stats.summarize_clusters_stc(clu,subject="fsaverage",
+#                                            p_thresh=0.05,
+#                                            vertices=stc_clu.vertices)
+meta_clusts = _find_clusters(stc_clu.data[:,0],1e-8,connectivity=cnx)[0]
+clust_labels = []
+for mc in meta_clusts:
+    temp_stc = stc_clu.copy()
+    temp_stc.data[:] = np.zeros((temp_stc.data.shape[0],1))
+    temp_stc.data[mc,0] = 1
+    lab = [x for x in mne.stc_to_label(temp_stc,src=fs_src) if x][0]
+    clust_labels.append(lab)
+
+X = np.zeros((len(subjs),len(clust_labels),fr[1]-fr[0]+1,len(conds),len(wavs)))
+for sub_idx,sub in enumerate(subjs):
+    src = mne.read_source_spaces("{}{}_{}-src.fif".format(proc_dir,sub,spacing))
+    vertnos=[s["vertno"] for s in src]
+    morph = mne.compute_source_morph(src,subject_from=sub_key[sub],
+                                     subject_to="fsaverage",
+                                     spacing=int(spacing[-1]),
+                                     subjects_dir=subjects_dir,
+                                     smooth=None)
 
 
-        for cond_idx,cond in enumerate(conds):
+    for cond_idx, cond in enumerate(conds):
+        for wav_idx, wav in enumerate(wavs):
             X_temp = []
             stc_temp = mne.read_source_estimate(
-                    "{dir}stcs/nc_{a}_{b}_{f0}-{f1}Hz_{d}-lh.stc".format(
-                      dir=proc_dir,a=sub,b=cond,f0=fr[0],f1=fr[1],
+                    "{dir}stcs/nc_{a}_{b}_{c}_{f0}-{f1}Hz_{d}-lh.stc".format(
+                      dir=proc_dir,a=sub,b=cond,c=wav,f0=fr[0],f1=fr[1],
                       d=spacing))
             stc_temp = morph.apply(stc_temp)
-            X[sub_idx,:,cond_idx] = mne.extract_label_time_course(stc_temp,clust_labels,fs_src,mode="mean")[:,0]
+            X[sub_idx,:,:,cond_idx,wav_idx] = \
+              mne.extract_label_time_course(stc_temp,clust_labels,
+                                            fs_src,mode="mean")
 
-
+for fs in f_subs:
+    temp_frange = list(np.arange(frange[fs[0]],frange[fs[1]])+1)
+    XX = X[:,:,fs[0]:fs[1],]
+    XX = XX.mean(axis=-1) # average over tone
+    XX_t = XX/sem(XX,axis=0) # t by subject
+    XXX_t = XX_t.mean(axis=0)
+    these_data = XXX_t
     for cl_idx,cl in enumerate(clust_labels):
         hemi = cl.hemi
-        fig, axes = plt.subplots(3,1)
+        fig, axes = plt.subplots(4,1)
         mfig = mlab.figure()
         brain = Brain("fsaverage", hemi, "inflated",
                       subjects_dir=subjects_dir, figure=mfig)
@@ -98,9 +113,14 @@ for fr in f_ranges:
         axes[1].imshow(mlab.screenshot(figure=mfig))
         axes[1].axis("off")
         mlab.close()
-        these_data = X[:,cl_idx,]
         temp_mean = these_data.mean(axis=0)
         temp_sem = sem(these_data,axis=0)
-        axes[2].bar(np.arange(len(conds)),temp_mean,yerr=temp_sem,tick_label=conds)
-        axes[2].set_ylim((0,temp_mean.max()+temp_sem.max()))
-        plt.suptitle("{}-{}Hz, Cluster {}".format(fr[0],fr[1],cl_idx))
+        axes[2].imshow(these_data[cl_idx,].T)
+        axes[2].set_xticks(np.arange(these_data.shape[1]))
+        axes[2].set_xticklabels([str(t) for t in temp_frange])
+        axes[2].set_yticks(np.arange(3))
+        axes[2].set_yticklabels(conds)
+        axes[3].imshow((f_obs[:,meta_clusts[cl_idx]]>f_thresh))
+        axes[3].set_yticks(np.arange(X.shape[2]))
+        axes[3].set_yticklabels([str(t) for t in list(np.arange(fr[0],fr[1]+1))])
+        plt.suptitle("{}-{}Hz, Cluster {}".format(temp_frange[0],temp_frange[-1],cl_idx))

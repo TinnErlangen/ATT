@@ -89,6 +89,7 @@ class Cycler():
 
 proc_dir = "../proc/"
 conds  = ["audio", "visual", "visselten"]
+conds  = ["zaehlen"]
 wavs = ["4000fftf", "4000cheby", "7000Hz", "4000Hz"]
 all_conds = [c+"_"+w for w in wavs for c in conds]
 #all_conds += ["rest"]
