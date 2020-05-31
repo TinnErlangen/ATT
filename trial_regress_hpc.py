@@ -1,6 +1,5 @@
 import numpy as np
 import mne
-plt.ion()
 
 import argparse
 import pickle
