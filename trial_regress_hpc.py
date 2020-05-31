@@ -138,4 +138,4 @@ for i in range(perm_n):
                                            include=include)
     all_perm_cluster_stats.append(perm_cluster_stats)
 all_perm_cluster_stats = np.array(all_perm_cluster_stats)
-np.save("{}{}_perm_{}.npy".format(proc_dir, band, perm_n))
+np.save("{}{}_perm_{}.npy".format(proc_dir, band, perm_n), all_perm_cluster_stats)
