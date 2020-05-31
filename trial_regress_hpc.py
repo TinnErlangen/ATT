@@ -74,8 +74,8 @@ threshold = dict(start=0, step=0.2)
 #random_state = 42
 random = np.random.RandomState()
 
-df_laut = pd.read_pickle("../behave/laut")
-df_ang = pd.read_pickle("../behave/ang")
+df_laut = pd.read_pickle("/scratch/ATT_dat/behave/laut")
+df_ang = pd.read_pickle("/scratch/ATT_dat/behave/ang")
 
 predictor_vars = ["Laut","Subj","Block","Wav"]
 dm_laut = df_laut.copy()[predictor_vars]
