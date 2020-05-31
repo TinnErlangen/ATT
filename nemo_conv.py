@@ -19,5 +19,23 @@ workfile = "{dir}nc_{s}/{r}/c,rfhp1.0Hz".format(dir=raw_dir,s=sub,r=run)
 print(workfile)
 raw = mne.io.read_raw_bti(workfile,preload=True,
                              rename_channels=False)
+raw.drop_channels(["TRIGGER","RESPONSE","UACurrent"])
 raw.notch_filter(notches,n_jobs="cuda", notch_widths=breadths)
-raw.resample(200,n_jobs="cuda")
+raw.resample(100,n_jobs="cuda")
+
+drop_every = 1
+picks = mne.pick_types(raw.info,meg=True)
+drop_list = []
+drop_idx = 0
+for ch_idx in np.nditer(picks):
+    if drop_idx == drop_every:
+        drop_list.append(raw.ch_names[ch_idx])
+        drop_idx = 0
+    else:
+        drop_idx += 1
+raw.drop_channels(drop_list)
+
+all_picks = mne.pick_types(raw.info,meg=True,ref_meg=True)
+ref_picks = mne.pick_types(raw.info,meg=False,ref_meg=True)
+ica = mne.preprocessing.ICA(n_components=32,allow_ref_meg=True,method="infomax")
+icaref = mne.preprocessing.ICA(n_components=2,allow_ref_meg=True,method="infomax")

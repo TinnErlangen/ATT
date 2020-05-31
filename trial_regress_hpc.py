@@ -3,6 +3,7 @@ import mne
 plt.ion()
 
 import argparse
+import pickle
 from statsmodels.regression.mixed_linear_model import MixedLM
 from mne.stats.cluster_level import _setup_connectivity, _find_clusters, \
     _reshape_clusters
@@ -119,6 +120,10 @@ tvals, coeffs = mass_uv_mixedlmm(formula, dm_new, data, group_id, exclude=exclud
 # find clusters
 clusters, cluster_stats = _find_clusters(tvals,threshold=threshold,connectivity=connectivity,include=include)
 
+main_result = {"formula":formula, "tvals":tvals, "coeffs":coeffs, "cluster_stats":cluster_stats}
+with open("{}{}_main_result".format(proc_dir, band), "wb") as f:
+    pickle.dump(main_result,f)
+
 # permute
 all_perm_cluster_stats = []
 for i in range(perm_n):
@@ -133,3 +138,5 @@ for i in range(perm_n):
                                            connectivity=connectivity,
                                            include=include)
     all_perm_cluster_stats.append(perm_cluster_stats)
+all_perm_cluster_stats = np.array(all_perm_cluster_stats)
+np.save("{}{}_perm_{}.npy".format(proc_dir, band, perm_n))
