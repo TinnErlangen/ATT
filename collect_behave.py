@@ -60,20 +60,21 @@ for sub_idx,sub in enumerate(subjs):
                               sub])
 df_laut = pd.DataFrame(table_laut,columns=["Laut","Block","Wav","Subj"])
 df_ang = pd.DataFrame(table_ang,columns=["Angenehm","Block","Wav","Subj"])
-for sub in subjs:
-    zs = zscore(df_laut[df_laut["Subj"]==sub]["Laut"])
-    df_laut.loc[df_laut["Subj"]==sub,["Laut"]] = zs
-    zs = zscore(df_ang[df_ang["Subj"]==sub]["Angenehm"])
-    df_ang.loc[df_ang["Subj"]==sub,["Angenehm"]] = zs
+# zscores within subject
+# for sub in subjs:
+#     zs = zscore(df_laut[df_laut["Subj"]==sub]["Laut"])
+#     df_laut.loc[df_laut["Subj"]==sub,["Laut"]] = zs
+#     zs = zscore(df_ang[df_ang["Subj"]==sub]["Angenehm"])
+#     df_ang.loc[df_ang["Subj"]==sub,["Angenehm"]] = zs
 
 df_laut = df_laut.sort_values(["Subj","Block","Wav"])
-df_laut = pd.concat([df_laut,pd.get_dummies(df_laut["Block"])],axis=1)
-df_laut = pd.concat([df_laut,pd.get_dummies(df_laut["Wav"])],axis=1)
-df_laut = pd.concat([df_laut,pd.get_dummies(df_laut["Subj"])],axis=1)
+# df_laut = pd.concat([df_laut,pd.get_dummies(df_laut["Block"])],axis=1)
+# df_laut = pd.concat([df_laut,pd.get_dummies(df_laut["Wav"])],axis=1)
+# df_laut = pd.concat([df_laut,pd.get_dummies(df_laut["Subj"])],axis=1)
 df_laut.to_pickle("../behave/laut")
 
 df_ang = df_ang.sort_values(["Subj","Block","Wav"])
-df_ang = pd.concat([df_ang,pd.get_dummies(df_ang["Block"])],axis=1)
-df_ang = pd.concat([df_ang,pd.get_dummies(df_ang["Wav"])],axis=1)
-df_ang = pd.concat([df_ang,pd.get_dummies(df_ang["Subj"])],axis=1)
+# df_ang = pd.concat([df_ang,pd.get_dummies(df_ang["Block"])],axis=1)
+# df_ang = pd.concat([df_ang,pd.get_dummies(df_ang["Wav"])],axis=1)
+# df_ang = pd.concat([df_ang,pd.get_dummies(df_ang["Subj"])],axis=1)
 df_ang.to_pickle("../behave/ang")

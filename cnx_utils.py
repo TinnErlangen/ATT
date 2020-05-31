@@ -55,7 +55,7 @@ def dPTE_to_laplace(x, undirect=True):
 def phi(mat, k=0):
     if len(mat.shape)>2:
         triu_inds = np.triu_indices(mat.shape[1],k=k)
-        return mat[:,triu_inds[0],triu_inds[1]]
+        return mat[...,triu_inds[0],triu_inds[1]]
     else:
         triu_inds = np.triu_indices(mat.shape[0],k=k)
         return mat[triu_inds[0],triu_inds[1]]
@@ -143,13 +143,16 @@ def get_active_edge_inds(components, edges):
                 comp_edge_inds[-1].append(edge_idx)
     return comp_edge_inds
 
-def cnx_cluster(f_vals, p_vals, cnx_n, p_thresh=0.05):
+def cnx_cluster(f_vals, p_vals, cnx_n, p_thresh=0.05, edges=None):
     psig_inds = np.where(p_vals<p_thresh)[0] # which connections pass threshold
     if not any(psig_inds): # nothing passed threshold; return 0 and no edges
         return [0], []
     # convert to upper triangular square matrix indices
-    triu_inds = np.triu_indices(cnx_n,k=1)
-    edges = [(triu_inds[0][idx],triu_inds[1][idx]) for idx in psig_inds]
+    if edges == None:
+        all_edges = np.triu_indices(cnx_n,k=1)
+    else:
+        all_edges = edges
+    edges = [(all_edges[0][idx],all_edges[1][idx]) for idx in psig_inds]
     # divide edges into graph components
     g = Graph()
     g.build_undirected(edges)
@@ -167,7 +170,7 @@ def cnx_cluster(f_vals, p_vals, cnx_n, p_thresh=0.05):
 def plot_directed_cnx(mat,labels,parc,fig=None,lup_title=None,ldown_title=None,rup_title=None,
                       rdown_title=None,figsize=(3840,2160), lineres=1000,
                       subjects_dir="/home/jeff/freesurfer/subjects",
-                      alpha_max=None, alpha_min=None):
+                      alpha_max=None, alpha_min=None, uniform_weight=False):
     lingrad = np.linspace(0,1,lineres)
     if fig is None:
         fig = mlab.figure(size=figsize)
@@ -213,8 +216,11 @@ def plot_directed_cnx(mat,labels,parc,fig=None,lup_title=None,ldown_title=None,r
     midpoints = (origins+dests)/2
     midpoint_units = midpoints/np.linalg.norm(midpoints,axis=1,keepdims=True)
     spline_mids = midpoints + midpoint_units*lengths*2
-    alphas = ((np.abs(mat[inds[0],inds[1]])-alpha_min)/(alpha_max-alpha_min))
-    alphas[alphas<0],alphas[alphas>1] = 0, 1
+    if uniform_weight:
+        alphas = np.ones(len(inds[0]))
+    else:
+        alphas = ((np.abs(mat[inds[0],inds[1]])-alpha_min)/(alpha_max-alpha_min))
+        alphas[alphas<0],alphas[alphas>1] = 0, 1
 
     mlab.points3d(origins[:,0],origins[:,1],origins[:,2],
                   alphas,scale_factor=10,color=(1,0,0),transparent=True)
@@ -237,3 +243,17 @@ def plot_directed_cnx(mat,labels,parc,fig=None,lup_title=None,ldown_title=None,r
                     opacity=alphas[idx])
 
     return brain
+
+""" calculate the corelation distance of dPTE connectivity matrices """
+def pw_cor_dist(mat,inds):
+    k = len(inds)
+    tu_inds = np.triu_indices(mat.shape[1], k=1)
+    vecs = mat[:, tu_inds[0], tu_inds[1]]
+    vecs -= 0.5 # dPTE is 0.5 centred; because we do this now, we can leave out the subtraction terms in distance calculation
+    dists = np.zeros(k,dtype="float32")
+    for pair_idx, pair in enumerate(inds):
+        dist = (vecs[pair[0]].dot(vecs[pair[1]]) /
+                np.sqrt(np.sum(vecs[pair[0]]**2) * np.sum(vecs[pair[1]]**2)))
+        dist = (dist * -1 + 1)/2 # transform to distance measure
+        dists[pair_idx] = dist
+    return dists

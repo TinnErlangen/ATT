@@ -1,8 +1,8 @@
 import numpy as np
 import mne
-import matplotlib.pyplot as plt
 plt.ion()
 
+import argparse
 from statsmodels.regression.mixed_linear_model import MixedLM
 from mne.stats.cluster_level import _setup_connectivity, _find_clusters, \
     _reshape_clusters
@@ -12,7 +12,6 @@ def mass_uv_mixedlmm(formula, data, uv_data, group_id, re_formula=None, exclude=
     tvals = []
     coeffs = []
     for d_idx in range(uv_data.shape[1]):
-        print("{} of {}".format(d_idx, uv_data.shape[1]), end="\r")
         if d_idx in exclude:
             tvals.append(0)
             coeffs.append(0)
@@ -25,6 +24,11 @@ def mass_uv_mixedlmm(formula, data, uv_data, group_id, re_formula=None, exclude=
         coeffs.append(mod_fit.params.get(indep_var))
     tvals, coeffs = np.array(tvals), np.array(coeffs)
     return tvals, coeffs
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--perm', type=int, default=500)
+parser.add_argument('--band', type=str, required=True)
+opt = parser.parse_args()
 
 subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
@@ -43,21 +47,18 @@ band_info["gamma_1"] = {"freqs":list(np.arange(41,60)),"cycles":9}
 band_info["gamma_2"] = {"freqs":list(np.arange(60,91)),"cycles":9}
 
 # parameters and setup
-subjects_dir = "/home/jeff/freesurfer/subjects/"
-proc_dir = "../proc/"
+subjects_dir = "/scratch/jeffhanna/freesurfer/subjects/"
+proc_dir = "/scratch/jeffhanna/ATT_dat/proc/"
 spacing = "ico4"
 conds = ["audio","visselten","visual"]
 wavs = ["4000Hz","4000cheby","7000Hz","4000fftf"]
-band = "alpha_0"
+band = opt.band
 indep_var = "Angenehm"
 n_freqs = 1
 n_srcs = 5124
 n_subjs = len(subjs)
-### permutation on betas
-# number of random samples
-perm_n = 100
-# place holders for bootstrap samples
-cluster_H0 = np.zeros(perm_n)
+perm_n = opt.perm
+
 # setup connectivity
 fs_src = mne.read_source_spaces("{}{}_{}-src.fif".format(proc_dir,"fsaverage",
                                                          spacing))
@@ -114,10 +115,9 @@ group_id = np.array(group_id)
 col_idx = dm_new.columns.get_loc(indep_var)
 
 formula = "Brain ~ {} + Block + Wav".format(indep_var)
-# tvals, coeffs = mass_uv_mixedlmm(formula, dm_new, data, group_id, exclude=exclude)
-# # find clusters
-# clusters, cluster_stats = _find_clusters(tvals,threshold=threshold,connectivity=connectivity,include=include)
-
+tvals, coeffs = mass_uv_mixedlmm(formula, dm_new, data, group_id, exclude=exclude)
+# find clusters
+clusters, cluster_stats = _find_clusters(tvals,threshold=threshold,connectivity=connectivity,include=include)
 
 # permute
 all_perm_cluster_stats = []
@@ -133,14 +133,3 @@ for i in range(perm_n):
                                            connectivity=connectivity,
                                            include=include)
     all_perm_cluster_stats.append(perm_cluster_stats)
-
-
-
-# # get upper CI bound from cluster mass H0
-# clust_threshold = np.quantile(cluster_H0[~np.isnan(cluster_H0)], [.95])
-#
-# # good cluster inds
-# good_cluster_inds = np.where(cluster_stats > clust_threshold)[0]
-
-# reshape clusters
-#clusters = _reshape_clusters(clusters, (n_freqs, n_srcs))

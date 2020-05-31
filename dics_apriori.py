@@ -4,8 +4,9 @@ import pickle
 import scipy.sparse
 from scipy import stats
 import numpy as np
-from mne.stats import f_mway_rm,summarize_clusters_stc,f_threshold_mway_rm
+from mne.stats import f_mway_rm, f_threshold_mway_rm
 import matplotlib.pyplot as plt
+from surfer import Brain
 plt.ion()
 
 
@@ -28,29 +29,28 @@ subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
 band_info = {}
 # band_info["theta_0"] = {"freqs":list(np.arange(3,7)),"cycles":3}
 # band_info["alpha_0"] = {"freqs":list(np.arange(7,10)),"cycles":5}
-# band_info["alpha_1"] = {"freqs":list(np.arange(10,13)),"cycles":7}
+band_info["alpha_1"] = {"freqs":list(np.arange(10,13)),"cycles":7}
 # band_info["beta_0"] = {"freqs":list(np.arange(13,22)),"cycles":9}
 # band_info["beta_1"] = {"freqs":list(np.arange(22,31)),"cycles":9}
 # band_info["gamma_0"] = {"freqs":list(np.arange(31,41)),"cycles":9}
 # band_info["gamma_1"] = {"freqs":list(np.arange(41,60)),"cycles":9}
 # band_info["gamma_2"] = {"freqs":list(np.arange(60,90)),"cycles":9}
 
-band_info["alpha_0"] = {"freqs":list(np.arange(7,10)),"cycles":5}
-
 subjects_dir = "/home/jeff/hdd/jeff/freesurfer/subjects/"
 proc_dir = "../proc/"
 spacing = 4
-n_jobs = 8
+n_jobs = 4
+parc = "RegionGrowing_70"
+
+with open("{}{}_apriori".format(proc_dir,parc),"rb") as f:
+    labels = pickle.load(f)
 
 conds = ["audio", "visual", "visselten"]
-#conds = ["rest","audio"]
+conds = ["audio", "visual"]
 wavs = ["4000fftf","4000Hz","7000Hz","4000cheby"]
 effect_idx = 0
 factor_levels = [len(conds), len(wavs)]
-factor_levels = [len(conds)]
 effects = ["A","B","A:B"]
-effects = ["A"]
-perm_num = 2048
 return_pvals=False
 p_thresh = 0.001
 threshold = f_threshold_mway_rm(len(subjs), [3,4], effects[effect_idx], p_thresh)
@@ -60,29 +60,18 @@ for c in conds[1:]:
     cond_str += "_" + c
 thresh_str = "tfce" if isinstance(threshold,dict) else p_thresh
 
-if len(effects)==1:
-    def stat_fun(*args):
-        # get f-values only.
-        return f_mway_rm(np.swapaxes(args, 1, 0), factor_levels=factor_levels,
-                         effects=effects, return_pvals=return_pvals)[0]
-else:
-    def stat_fun(*args):
-        # get f-values only.
-        return f_mway_rm(np.swapaxes(args, 1, 0), factor_levels=factor_levels,
-                         effects=effects, return_pvals=return_pvals)[0][effect_idx]
-
-
 # get connectivity
 fs_src = mne.read_source_spaces("{}{}_ico{}-src.fif".format(proc_dir,"fsaverage", spacing))
 cnx = mne.spatial_src_connectivity(fs_src)
-del fs_src
+#del fs_src
 exclude = np.load("{}fsaverage_ico{}_exclude.npy".format(proc_dir,spacing))
-
+results = []
+figures = []
+brains = []
 for k,v in band_info.items():
     fr = v["freqs"]
     band = k
-    X = [[] for wav in wavs for cond in conds]
-    #X = [[] for cond in conds]
+    X = [[[] for wav in wavs for cond in conds] for lab in labels]
     for sub_idx,sub in enumerate(subjs):
         src = mne.read_source_spaces("{}{}_ico{}-src.fif".format(proc_dir,sub,spacing))
         vertnos=[s["vertno"] for s in src]
@@ -105,43 +94,33 @@ for k,v in band_info.items():
             # X[idx].append(np.vstack(X_temp))
             # idx += 1
             for wav_idx,wav in enumerate(wavs):
-                X_temp = []
                 stc_temp = mne.read_source_estimate(
                   "{dir}stcs/nc_{a}_{b}_{c}_{f0}-{f1}Hz_ico{d}-lh.stc".format(
                    dir=proc_dir,a=sub,b=cond,c=wav,f0=fr[0],f1=fr[-1],
                    d=spacing))
                 stc_temp = morph.apply(stc_temp)
-                X_temp.append(stc_temp.data.transpose(1,0))
-                X[idx].append(np.vstack(X_temp))
+                for lab_idx, lab in enumerate(labels):
+                    X_temp = mne.extract_label_time_course(stc_temp,lab,fs_src,mode="pca_flip")
+                    X[lab_idx][idx].append(X_temp.mean(axis=-1).squeeze())
                 idx += 1
-    X = [(np.array(x)*1e+26).astype(np.float32).mean(axis=1,keepdims=True) for x in X]
-    # X = [(np.array(x)*1e+26).astype(np.float32) for x in X] # don't average over freq
+    X = [[(np.array(x)*1e+26).astype(np.float32) for x in xx] for xx in X]
     del X_temp, morph, src
-
-    # f_obs, clusters, cluster_pv, H0 = clu = \
-    #   mne.stats.spatio_temporal_cluster_test(X,connectivity=cnx,n_jobs=n_jobs,
-    #                                          threshold=threshold,
-    #                                          stat_fun=stat_fun,
-    #                                          n_permutations=perm_num,
-    #                                          spatial_exclude=exclude)
-    # raw_f = stc_temp.copy()
-    # raw_f.data = f_obs.T
-    # if len(conds)==2:
-    #     sign = np.sign(X[0].mean(axis=0)-X[1].mean(axis=0))
-    #     print("Min: {}, Max: {}".format(sign.min(),sign.max()))
-    #     raw_f.data *= sign.T
-    # raw_f.save("{}stc_f_{}-{}Hz_{}_{}_{}".format(proc_dir, fr[0], fr[-1], cond_str,
-    #                                                  thresh_str, effects[effect_idx]))
-    # with open("{}clu_{}-{}Hz_{}_{}_{}".format(proc_dir, fr[0], fr[-1], cond_str,
-    #                                           thresh_str, effects[effect_idx]),"wb") as f:
-    #     pickle.dump(clu,f)
-    # try:
-    #     stc_clu = mne.stats.summarize_clusters_stc(clu,subject="fsaverage",
-    #                                                p_thresh=0.05,
-    #                                                vertices=raw_f.vertices)
-    #     stc_clu.save("{}stc_clu_{}-{}Hz_{}_{}_{}".format(proc_dir, fr[0], fr[-1],
-    #                                                      cond_str,
-    #                                                      thresh_str,
-    #                                                      effects[effect_idx]))
-    # except:
-    #     print("No significant results")
+    X = np.array(X).swapaxes(0, 2)
+    result = f_mway_rm(X, factor_levels=factor_levels, effects=effects)[0][0]
+    sig_areas = np.where(result[1]<0.05)[0]
+    if sig_areas.size==0: continue
+    for sa in np.nditer(sig_areas):
+        title = "{}_{}".format(k, labels[sa].name)
+        figures.append(mlab.figure(title))
+        brains.append(Brain('fsaverage', 'both', 'inflated', alpha=0.7,
+                      subjects_dir=subjects_dir, figure=figures[-1]))
+        brains[-1].add_annotation(parc,color="black")
+        brains[-1].add_label(labels[sa])
+        plt.figure()
+        these_means = X[...,sa]
+        these_means = np.array([these_means[...,idx:idx+4].mean(axis=-1) for idx in range(0,len(conds)*4,4)])
+        errs = stats.sem(these_means,axis=1)
+        these_means = these_means.mean(axis=1)
+        plt.bar(np.arange(len(these_means)),these_means,yerr=errs)
+        plt.title(title)
+    results.append(result)

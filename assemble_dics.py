@@ -18,13 +18,24 @@ subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_31",  "ATT_33", "ATT_34", "ATT_35", "ATT_36", "ATT_37"]
 # ATT_30/KER27, ATT_27, ATT_32/EAM67   excluded for too much head movement between blocks
 
-subjects_dir = "/home/jeff/freesurfer/subjects/"
+band_info = {}
+band_info["theta_0"] = {"freqs":list(np.arange(3,7)),"cycles":3}
+band_info["alpha_0"] = {"freqs":list(np.arange(7,10)),"cycles":5}
+band_info["alpha_1"] = {"freqs":list(np.arange(10,13)),"cycles":7}
+band_info["beta_0"] = {"freqs":list(np.arange(13,22)),"cycles":9}
+band_info["beta_1"] = {"freqs":list(np.arange(22,31)),"cycles":9}
+band_info["gamma_0"] = {"freqs":list(np.arange(31,41)),"cycles":9}
+band_info["gamma_1"] = {"freqs":list(np.arange(41,60)),"cycles":9}
+band_info["gamma_2"] = {"freqs":list(np.arange(60,91)),"cycles":9}
+
+subjects_dir = "/home/jeff/hdd/jeff/freesurfer/subjects/"
 proc_dir = "../proc/"
+band = "alpha_0"
 runs = ["rest","audio","visselten","visual","zaehlen"]
 runs = ["audio","visselten","visual"]
 wavs = ["4000Hz","4000cheby","7000Hz","4000fftf"]
 filelist = listdir(proc_dir+"stcs/")
-spacing = "oct6"
+spacing = "ico4"
 
 for sub in subjs:
     print("Subject: {a}".format(a=sub))
@@ -38,22 +49,30 @@ for sub in subjs:
         for wav in wavs:
             X_temp = []
             epo_num = 0
-            filename = "nc_{a}_{b}_{c}_{e}_{sp}-lh.stc".format(a=sub,b=run,
+            filename = "nc_{a}_{b}_{c}_{f0}-{f1}Hz_{e}_{sp}-lh.stc".format(a=sub,b=run,
                                                           c=wav,e=epo_num,
-                                                          sp=spacing)
+                                                          sp=spacing,
+                                                          f0=band_info[band]["freqs"][0],
+                                                          f1=band_info[band]["freqs"][-1])
             while filename in filelist:
                 stc = mne.read_source_estimate(proc_dir+"stcs/"+filename)
                 stc = morph.apply(stc)
                 X_temp.append(stc.data.mean(axis=1,keepdims=True))
                 epo_num += 1
-                filename = "nc_{a}_{b}_{c}_{e}_{sp}-lh.stc".format(a=sub,b=run,
+                filename = "nc_{a}_{b}_{c}_{f0}-{f1}Hz_{e}_{sp}-lh.stc".format(a=sub,b=run,
                                                               c=wav,e=epo_num,
-                                                              sp=spacing)
+                                                              sp=spacing,
+                                                              f0=band_info[band]["freqs"][0],
+                                                              f1=band_info[band]["freqs"][-1])
+            if len(X_temp) == 0:
+                raise ValueError("No data found.")
             X_temp = np.array(X_temp,dtype=np.float64)*1e+27
-            np.save("{dir}stcs/nc_{a}_{b}_{c}_{sp}.npy".format(dir=proc_dir,
+            np.save("{dir}stcs/nc_{a}_{b}_{c}_{f0}-{f1}Hz_{sp}.npy".format(dir=proc_dir,
                                                                a=sub,b=run,
                                                                c=wav,
-                                                               sp=spacing),
+                                                               sp=spacing,
+                                                               f0=band_info[band]["freqs"][0],
+                                                               f1=band_info[band]["freqs"][-1]),
                                                                X_temp)
             # X_mean = np.mean(X_temp,axis=0)
             # X_std = np.std(X_temp,axis=0)

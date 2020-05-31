@@ -7,7 +7,7 @@ plt.ion()
 proc_dir = "/home/jeff/ATT_dat/proc/"
 subjects_dir = "/home/jeff/hdd/jeff/freesurfer/subjects/"
 subject="fsaverage"
-stc_file = "stc_f_7-9Hz_rest_audio_tfce_A-lh.stc"
+stc_file = "stc_f_60-89Hz_rest_audio_tfce_A-lh.stc"
 initial_time = 0
 
 stc = mne.read_source_estimate("{proc}{file}".format(proc=proc_dir,file=stc_file))

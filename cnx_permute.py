@@ -21,13 +21,13 @@ subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
          "ATT_24", "ATT_25", "ATT_26", "ATT_28", "ATT_29", "ATT_31", "ATT_33",
          "ATT_34", "ATT_35", "ATT_36", "ATT_37"]
-freqs = ["theta_0"]
-conds = ["rest", "zaehlen"]
+freqs = ["gamma_2"]
+conds = ["rest", "visselten"]
 if not (len(conds) == 1 or len(freqs) == 1):
     raise ValueError("Conds or freqs must have length 1.")
 factor_levels = [max([len(conds),len(freqs)])]
 effects = "A"
-p_thresh = 0.001
+p_thresh = 0.05
 comp_p_thresh = 0.05
 perm_num = 10000
 n_jobs = 8
@@ -44,13 +44,12 @@ for sub in subjs:
             dPTEs[idx].append(dPTE)
             idx += 1
 
-trial_min = np.array([len(d) for dpte in dPTEs for d in dpte]).min()
-pruned_dPTE = [[d[np.random.randint(0,len(d),trial_min)] for d in dpte] for dpte in dPTEs]
+#trial_min = np.array([len(d) for dpte in dPTEs for d in dpte]).min()
+#pruned_dPTE = [[d[np.random.randint(0,len(d),trial_min)] for d in dpte] for dpte in dPTEs]
 vec_dPTE = [[phi(d.mean(axis=0),k=1) for d in dpte] for dpte in dPTEs]
 
 dPTEs = np.swapaxes(np.array(vec_dPTE),0,1)
 dPTEs -= 0.5
-dPTEs /= np.abs(dPTEs).max()
 
 cnx_n = dPTE.shape[-1]
 f_vals, p_vals = f_mway_rm(dPTEs, factor_levels, effects=effects)

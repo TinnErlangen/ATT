@@ -8,7 +8,7 @@ plt.ion()
 
 proc_dir = "/home/jeff/ATT_dat/proc/"
 mat_dir = "/home/jeff/ATT_dat/proc/"
-band = "theta_0"
+band = "alpha_1"
 figsize = (3840,2160)
 parc = "RegionGrowing_70"
 src_fname = "fsaverage_ico5-src.fif"
@@ -27,7 +27,7 @@ subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_24", "ATT_25", "ATT_26", "ATT_28", "ATT_29", "ATT_31",
          "ATT_33", "ATT_34", "ATT_35", "ATT_36", "ATT_37"]
 conds = ["audio", "visual", "visselten"]
-conds = ["zaehlen", "rest"]
+conds = ["audio", "rest"]
 
 try:
     edges = np.load("{}{}-{}_{}_c{}.npy".format(proc_dir,conds[0],conds[1],band,comp))
