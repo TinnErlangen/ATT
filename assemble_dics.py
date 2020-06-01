@@ -30,7 +30,7 @@ band_info["gamma_2"] = {"freqs":list(np.arange(60,91)),"cycles":9}
 
 subjects_dir = "/home/jeff/hdd/jeff/freesurfer/subjects/"
 proc_dir = "../proc/"
-band = "alpha_0"
+band = "beta_1"
 runs = ["rest","audio","visselten","visual","zaehlen"]
 runs = ["audio","visselten","visual"]
 wavs = ["4000Hz","4000cheby","7000Hz","4000fftf"]
