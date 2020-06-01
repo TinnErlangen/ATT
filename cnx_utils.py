@@ -1,5 +1,5 @@
 import numpy as np
-from covar import cov_shrink_ss
+#from covar import cov_shrink_ss
 from scipy.linalg import sqrtm
 import pickle
 from collections import defaultdict
