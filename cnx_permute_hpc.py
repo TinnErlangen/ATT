@@ -101,7 +101,7 @@ col_idx = dm_new.columns.get_loc(indep_var)
 
 formula = "Brain ~ {} + Block + Wav".format(indep_var)
 tvals, coeffs = mass_uv_mixedlmm(formula, dm_new, data, group_id)
-main_result = {"formula":formula, "tvals":tvals, "coeffs":coeffs, "cluster_stats":cluster_stats}
+main_result = {"formula":formula, "tvals":tvals, "coeffs":coeffs}
 with open("{}cnx_{}_{}_main_result".format(proc_dir, indep_var, band), "wb") as f:
     pickle.dump(main_result,f)
 
