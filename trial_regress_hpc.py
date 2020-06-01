@@ -120,7 +120,7 @@ tvals, coeffs = mass_uv_mixedlmm(formula, dm_new, data, group_id, exclude=exclud
 clusters, cluster_stats = _find_clusters(tvals,threshold=threshold,connectivity=connectivity,include=include)
 
 main_result = {"formula":formula, "tvals":tvals, "coeffs":coeffs, "cluster_stats":cluster_stats}
-with open("{}{}_main_result".format(proc_dir, band), "wb") as f:
+with open("{}dics_{}_{}_main_result".format(proc_dir, indep_var, band), "wb") as f:
     pickle.dump(main_result,f)
 
 # permute
@@ -138,4 +138,4 @@ for i in range(perm_n):
                                            include=include)
     all_perm_cluster_stats.append(perm_cluster_stats)
 all_perm_cluster_stats = np.array(all_perm_cluster_stats)
-np.save("{}{}_perm_{}.npy".format(proc_dir, band, perm_n), all_perm_cluster_stats)
+np.save("{}dics_{}_{}_perm_{}.npy".format(proc_dir, indep_var, band, perm_n), all_perm_cluster_stats)

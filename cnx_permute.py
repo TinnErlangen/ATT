@@ -56,19 +56,19 @@ f_vals, p_vals = f_mway_rm(dPTEs, factor_levels, effects=effects)
 fsums, edges = cnx_cluster(f_vals, p_vals, cnx_n, p_thresh=p_thresh)
 print(fsums)
 
-# permute shuffled data
-results = Parallel(n_jobs=n_jobs, verbose=10)(delayed(cnx_permute)() for i in range(perm_num))
-results = np.array(results)
-plt.hist(results,bins=200)
-fsum_thresh = np.quantile(results,1-comp_p_thresh)
-print("{} threshold is {}".format(p_thresh, fsum_thresh))
-sig_comps = np.where([f > fsum_thresh for f in fsums])[0]
-if len(sig_comps):
-    for comp_idx in np.nditer(sig_comps):
-        edge_out = np.array(edges[comp_idx])
-        if len(conds) > 1:
-            np.save("{}{}-{}_{}_c{}.npy".format(proc_dir,conds[0],conds[1],freqs[0],comp_idx),edge_out)
-        if len(freqs) > 1:
-            np.save("{}{}-{}_{}_c{}.npy".format(proc_dir,freqs[0],freqs[1],conds[0],comp_idx),edge_out)
-else:
-    print("No significant components.")
+# # permute shuffled data
+# results = Parallel(n_jobs=n_jobs, verbose=10)(delayed(cnx_permute)() for i in range(perm_num))
+# results = np.array(results)
+# plt.hist(results,bins=200)
+# fsum_thresh = np.quantile(results,1-comp_p_thresh)
+# print("{} threshold is {}".format(p_thresh, fsum_thresh))
+# sig_comps = np.where([f > fsum_thresh for f in fsums])[0]
+# if len(sig_comps):
+#     for comp_idx in np.nditer(sig_comps):
+#         edge_out = np.array(edges[comp_idx])
+#         if len(conds) > 1:
+#             np.save("{}{}-{}_{}_c{}.npy".format(proc_dir,conds[0],conds[1],freqs[0],comp_idx),edge_out)
+#         if len(freqs) > 1:
+#             np.save("{}{}-{}_{}_c{}.npy".format(proc_dir,freqs[0],freqs[1],conds[0],comp_idx),edge_out)
+# else:
+#     print("No significant components.")
