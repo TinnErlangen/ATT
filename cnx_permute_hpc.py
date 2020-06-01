@@ -118,4 +118,4 @@ for i in range(perm_n):
     all_perm_tvals.append(perm_tvals)
 all_perm_tvals = np.array(all_perm_tvals)
 np.save("{}cnx_{}_{}_perm_{}.npy".format(proc_dir, indep_var, band, perm_n),
-        all_perm_t_vals)
+        all_perm_tvals)
