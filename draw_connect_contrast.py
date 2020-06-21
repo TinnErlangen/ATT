@@ -8,7 +8,7 @@ plt.ion()
 
 proc_dir = "/home/jeff/ATT_dat/proc/"
 mat_dir = "/home/jeff/ATT_dat/proc/"
-band = "alpha_1"
+band = "alpha_0"
 figsize = (3840,2160)
 parc = "RegionGrowing_70"
 src_fname = "fsaverage_ico5-src.fif"

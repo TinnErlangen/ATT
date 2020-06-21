@@ -1,6 +1,7 @@
-from mne.stats import f_mway_rm, summarize_clusters_stc, f_threshold_mway_rm
+from mne.stats import summarize_clusters_stc
 from cnx_utils import load_sparse, phi, cnx_cluster, plot_directed_cnx
 import numpy as np
+from statsmodels.regression.mixed_linear_model import MixedLM
 from joblib import Parallel, delayed
 import matplotlib.pyplot as plt
 import mne

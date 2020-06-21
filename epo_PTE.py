@@ -21,11 +21,12 @@ proc_dir = "../proc/"
 subjects_dir = "/home/jeff/hdd/jeff/freesurfer/subjects/"
 subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
-         "ATT_24", "ATT_25", "ATT_26", "ATT_28", "ATT_29", "ATT_31",
+         "ATT_24", "ATT_25", "ATT_26", "ATT_28", "ATT_31",
          "ATT_33", "ATT_34", "ATT_35", "ATT_36", "ATT_37"]
-subjs = ["ATT_16"]
+
 
 # ATT_30/KER27, ATT_27, ATT_32/EAM67   excluded for too much head movement between blocks
+# ATT_29 did not respond
 mri_key = {"KIL13":"ATT_10","ALC81":"ATT_11","EAM11":"ATT_19","ENR41":"ATT_18",
            "NAG_83":"ATT_36","PAG48":"ATT_21","SAG13":"ATT_20","HIU14":"ATT_23",
            "KIL72":"ATT_25","FOT12":"ATT_28","KOI12":"ATT_16","BLE94":"ATT_29",
@@ -36,7 +37,8 @@ mri_key = {"KIL13":"ATT_10","ALC81":"ATT_11","EAM11":"ATT_19","ENR41":"ATT_18",
            "ATT_15_fsaverage":"ATT_15"}
 sub_key = {v: k for k,v in mri_key.items()}
 runs = ["rest","audio","visselten","visual"]
-#runs = ["visual"]
+runs = ["audio","visselten","visual"]
+runs = ["zaehlen"]
 wavs = ["4000fftf","4000Hz","7000Hz","4000cheby"]
 
 inv_method="sLORETA"
@@ -56,7 +58,7 @@ band_info["gamma_1"] = {"freqs":list(np.arange(41,60)),"cycles":9}
 band_info["gamma_2"] = {"freqs":list(np.arange(60,91)),"cycles":9}
 cyc_names = ["theta_0","alpha_0","alpha_1","beta_0","beta_1","gamma_0",
              "gamma_1","gamma_2"]
-#cyc_names = ["gamma_2"]
+cyc_names = ["alpha_1"]
 
 cov = mne.read_cov("{}empty-cov.fif".format(proc_dir))
 fs_labels = mne.read_labels_from_annot("fsaverage", "RegionGrowing_70",
@@ -83,6 +85,11 @@ for sub in subjs:
                 epos.append(temp_epo)
             epo = mne.concatenate_epochs(epos)
             del epos
+            # epo_name = "{dir}{sub}_{run}_byresp-epo.fif".format(dir=proc_dir,
+            #                                                      sub=sub,
+            #                                                      run=run)
+            # epo = mne.read_epochs(epo_name)
+
         inv_op = mne.minimum_norm.make_inverse_operator(epo.info,fwd,cov)
         stcs = mne.minimum_norm.apply_inverse_epochs(epo,inv_op,lambda2,
                                                     method=inv_method,
@@ -100,4 +107,8 @@ for sub in subjs:
                                                                sub=sub,
                                                                run=run,
                                                                cn=cn))
+            # dPTE.save("{dir}nc_{sub}_{run}_byresp_dPTE_{cn}.sps".format(dir=proc_dir,
+            #                                                             sub=sub,
+            #                                                             run=run,
+            #                                                             cn=cn))
             del dPTE

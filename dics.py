@@ -73,7 +73,9 @@ for k,v in band_info.items():
         #csd = csd.mean()
         fwd_name = "{dir}nc_{sub}_{sp}-fwd.fif".format(dir=proc_dir, sub=sub, sp=spacing)
         fwd = mne.read_forward_solution(fwd_name)
-        filters = make_dics(epo.info, fwd, csd, real_filter=True)
+        filters = make_dics(epo.info, fwd, csd, real_filter=True,
+                            weight_norm="nai", reduce_rank=False,
+                            pick_ori="max-power")
         del epo, csd, fwd
 
         print("\n\n")
@@ -82,14 +84,14 @@ for k,v in band_info.items():
             epos = epo_conds
             epo_names = epo_cond_names
         for epo,epo_name in zip(epos,epo_names):
-            # epo_csd = csd_morlet(epo, frequencies=freqs,
-            #                        n_jobs=n_jobs, n_cycles=c, decim=3)
-            # #epo_csd = epo_csd.mean()
-            # stc, freqs = apply_dics_csd(epo_csd,filters)
-            # stc.expand([s["vertno"] for s in src])
-            # stc.subject = sub
-            # stc.save("{a}stcs/nc_{b}_{c}_{f0}-{f1}Hz_{sp}".format(
-            #                 a=proc_dir, b=sub, c=epo_name, f0=f[0], f1=f[-1], sp=spacing))
+            epo_csd = csd_morlet(epo, frequencies=freqs,
+                                   n_jobs=n_jobs, n_cycles=c, decim=3)
+            #epo_csd = epo_csd.mean()
+            stc, freqs = apply_dics_csd(epo_csd,filters)
+            stc.expand([s["vertno"] for s in src])
+            stc.subject = sub
+            stc.save("{a}stcs/nc_{b}_{c}_{f0}-{f1}Hz_{sp}".format(
+                            a=proc_dir, b=sub, c=epo_name, f0=f[0], f1=f[-1], sp=spacing))
             for event in range(len(epo)):
                 print(event)
                 event_csd = csd_morlet(epo[event], frequencies=freqs,

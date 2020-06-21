@@ -23,7 +23,7 @@ subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_24", "ATT_25", "ATT_26", "ATT_28", "ATT_29", "ATT_31", "ATT_33",
          "ATT_34", "ATT_35", "ATT_36", "ATT_37"]
 freq = "alpha_1"
-conds = ["audio", "visual", "visselten"]
+conds = ["audio", "visselten"]
 wavs = ["4000fftf","4000Hz","7000Hz","4000cheby"]
 factor_levels = [len(conds), len(wavs)]
 effects = ["A","B","A:B"]

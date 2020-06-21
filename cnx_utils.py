@@ -170,11 +170,16 @@ def cnx_cluster(f_vals, p_vals, cnx_n, p_thresh=0.05, edges=None):
 def plot_directed_cnx(mat,labels,parc,fig=None,lup_title=None,ldown_title=None,rup_title=None,
                       rdown_title=None,figsize=(3840,2160), lineres=1000,
                       subjects_dir="/home/jeff/freesurfer/subjects",
-                      alpha_max=None, alpha_min=None, uniform_weight=False):
+                      alpha_max=None, alpha_min=None, uniform_weight=False,
+                      surface="inflated", alpha=1, top_cnx=None):
+    if top_cnx is not None:
+        matflat = mat.flatten()
+        thresh = np.sort(matflat[matflat>0])[-top_cnx]
+        mat[mat<thresh] = 0
     lingrad = np.linspace(0,1,lineres)
     if fig is None:
         fig = mlab.figure(size=figsize)
-    brain = Brain('fsaverage', 'both', 'inflated', alpha=0.7,
+    brain = Brain('fsaverage', 'both', surface, alpha=alpha,
                   subjects_dir=subjects_dir, figure=fig)
     if lup_title:
         brain.add_text(0, 0.8, lup_title, "lup", font_size=40)
@@ -217,7 +222,10 @@ def plot_directed_cnx(mat,labels,parc,fig=None,lup_title=None,ldown_title=None,r
     midpoint_units = midpoints/np.linalg.norm(midpoints,axis=1,keepdims=True)
     spline_mids = midpoints + midpoint_units*lengths*2
     if uniform_weight:
-        alphas = np.ones(len(inds[0]))
+        alphas = np.ones(len(inds[0]))*0.8
+        area_weight[area_weight>0] = 0.8
+        area_red[area_red>0] = 1
+        area_blue[area_blue>0] = 1
     else:
         alphas = ((np.abs(mat[inds[0],inds[1]])-alpha_min)/(alpha_max-alpha_min))
         alphas[alphas<0],alphas[alphas>1] = 0, 1
@@ -231,6 +239,10 @@ def plot_directed_cnx(mat,labels,parc,fig=None,lup_title=None,ldown_title=None,r
             continue
         brain.add_label(l,color=(area_red[l_idx],0,area_blue[l_idx]),
                         alpha=area_weight[l_idx])
+        # mlab.points3d(rrs[l_idx,0],rrs[l_idx,1],rrs[l_idx,2],
+        #               area_weight[l_idx],scale_factor=10,
+        #               color=(area_red[l_idx],0,area_blue[l_idx]),
+        #               transparent=True)
     spl_pts = np.empty((len(origins),3,lineres))
     for idx in range(len(origins)):
         curve = bezier.Curve(np.array([[origins[idx,0],spline_mids[idx,0],dests[idx,0]],

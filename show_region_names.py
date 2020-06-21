@@ -25,8 +25,9 @@ constrain_regs = list(set(constrain_regs[0]+constrain_regs[1]))
 labels = mne.read_labels_from_annot("fsaverage",parc)
 figs = []
 brains = []
+constrain_regs = range(len(labels))
 for cr in constrain_regs:
     figs.append(mlab.figure(labels[cr].name))
-    brains.append(Brain('fsaverage', 'both', 'inflated',
-                  subjects_dir=subjects_dir, figure=figs[-1]))
+    brains.append(Brain('fsaverage', 'both', 'white',
+                  subjects_dir=subjects_dir, figure=figs[-1], alpha=0.99))
     brains[-1].add_label(labels[cr])
