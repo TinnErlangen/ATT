@@ -27,6 +27,7 @@ def mass_uv_mixedlmm(formula, data, uv_data, group_id, re_formula=None):
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--perm', type=int, default=500)
+parser.add_argument('--iter', type=int, default=0)
 parser.add_argument('--band', type=str, required=True)
 opt = parser.parse_args()
 
@@ -131,5 +132,5 @@ for i in range(perm_n):
         all_perm_tvals[2].append(pm.tvalues.get("C(Block, Treatment('rest'))[T.visual]"))
         all_perm_tvals[3].append(pm.tvalues.get("C(Block, Treatment('rest'))[T.zaehlen]"))
 all_perm_tvals = np.array(all_perm_tvals)
-np.save("{}cnx_{}_{}_perm_{}.npy".format(proc_dir, indep_var, band, perm_n),
+np.save("{}cnx_{}_{}_perm_{}_{}.npy".format(proc_dir, indep_var, band, perm_n, opt.iter),
         all_perm_tvals)
