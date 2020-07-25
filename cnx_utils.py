@@ -163,7 +163,7 @@ def cnx_cluster(f_vals, p_vals, cnx_n, p_thresh=0.05, edges=None):
     out_edges = []
     for act_ed_inds in active_edge_inds:
         f_inds = psig_inds[act_ed_inds]
-        comp_f.append(np.sum(f_vals[f_inds]))
+        comp_f.append(np.sum(np.abs(f_vals)[f_inds]))
         out_edges.append([edges[aei] for aei in act_ed_inds])
     return comp_f, out_edges
 
@@ -171,11 +171,26 @@ def plot_directed_cnx(mat,labels,parc,fig=None,lup_title=None,ldown_title=None,r
                       rdown_title=None,figsize=(3840,2160), lineres=1000,
                       subjects_dir="/home/jeff/freesurfer/subjects",
                       alpha_max=None, alpha_min=None, uniform_weight=False,
-                      surface="inflated", alpha=1, top_cnx=None):
+                      surface="inflated", alpha=1, top_cnx=50, bot_cnx=None,
+                      centre=0):
+    if mat.min() >= centre or mat.max() < centre:
+        print("Warning: Values do not seem to match specified centre of {}.".format(centre))
+    mat -= centre
+
     if top_cnx is not None:
-        matflat = mat.flatten()
-        thresh = np.sort(matflat[matflat>0])[-top_cnx]
-        mat[mat<thresh] = 0
+        matflat = np.abs(mat.flatten())
+        try:
+            thresh = np.sort(matflat[matflat>0])[-top_cnx]
+        except:
+            thresh = matflat[matflat>0].min()
+        mat[np.abs(mat)<thresh] = 0
+    if bot_cnx is not None:
+        matflat = np.abs(mat.flatten())
+        try:
+            thresh = np.sort(matflat[matflat>0])[-bot_cnx]
+        except:
+            thresh = matflat[matflat>0].max()
+        mat[np.abs(mat)>thresh] = 0
     lingrad = np.linspace(0,1,lineres)
     if fig is None:
         fig = mlab.figure(size=figsize)
@@ -252,6 +267,84 @@ def plot_directed_cnx(mat,labels,parc,fig=None,lup_title=None,ldown_title=None,r
         spl_pts[idx,] = curve.evaluate_multi(lingrad)
         mlab.plot3d(spl_pts[idx,0,],spl_pts[idx,1,],spl_pts[idx,2,],
                     lingrad*255,tube_radius=alphas[idx]*2,colormap="RdBu",
+                    opacity=alphas[idx])
+
+    return brain
+
+def plot_undirected_cnx(mat, labels, parc, fig=None, lup_title=None,
+                        ldown_title=None, rup_title=None, rdown_title=None,
+                        figsize=(3840,2160), lineres=1000,
+                        subjects_dir="/home/jeff/freesurfer/subjects",
+                        alpha_max=None, alpha_min=None, uniform_weight=False,
+                        surface="inflated", alpha=1, top_cnx=50, bot_cnx=None,
+                        color=(1,0,0)):
+    if top_cnx is not None:
+        matflat = mat.flatten()
+        thresh = np.sort(matflat[matflat>0])[-top_cnx]
+        mat[mat<thresh] = 0
+    if bot_cnx is not None:
+        matflat = np.abs(mat.flatten())
+        thresh = np.sort(matflat[matflat>0])[-bot_cnx]
+        mat[np.abs(mat)>thresh] = 0
+    lingrad = np.linspace(0,1,lineres)
+    if fig is None:
+        fig = mlab.figure(size=figsize)
+    brain = Brain('fsaverage', 'both', surface, alpha=alpha,
+                  subjects_dir=subjects_dir, figure=fig)
+    if lup_title:
+        brain.add_text(0, 0.8, lup_title, "lup", font_size=40)
+    if ldown_title:
+        brain.add_text(0, 0, ldown_title, "ldown", font_size=40)
+    if rup_title:
+        brain.add_text(0.7, 0.8, rup_title, "rup", font_size=40)
+    if rdown_title:
+        brain.add_text(0.7, 0., rdown_title, "rdown", font_size=40)
+    brain.add_annotation(parc,color="black")
+    rrs = np.array([brain.geo[l.hemi].coords[l.center_of_mass()] for l in labels])
+
+    if alpha_max is None:
+        alpha_max = np.abs(mat).max()
+    if alpha_min is None:
+        alpha_min = np.abs(mat[mat!=0]).min()
+
+    inds = np.where(mat>0)
+    origins = rrs[inds[0],]
+    dests = rrs[inds[1],]
+
+    areas = np.zeros(len(labels))
+    np.add.at(areas,inds[0],1)
+    np.add.at(areas,inds[1],1)
+    area_weights = areas/areas.max()
+
+    lengths = np.linalg.norm(origins-dests, axis=1)
+    lengths = np.broadcast_to(lengths,(3,len(lengths))).T
+    midpoints = (origins+dests)/2
+    midpoint_units = midpoints/np.linalg.norm(midpoints,axis=1,keepdims=True)
+    spline_mids = midpoints + midpoint_units*lengths*2
+    if uniform_weight:
+        alphas = np.ones(len(inds[0]))*0.8
+        area_weights[area_weights>0] = 0.8
+    else:
+        alphas = ((np.abs(mat[inds[0],inds[1]])-alpha_min)/(alpha_max-alpha_min))
+        alphas[alphas<0],alphas[alphas>1] = 0, 1
+
+    mlab.points3d(origins[:,0],origins[:,1],origins[:,2],
+                  alphas,scale_factor=10,color=color,transparent=True)
+    mlab.points3d(dests[:,0],dests[:,1],dests[:,2],
+                  alphas,scale_factor=10,color=color,transparent=True)
+    for l_idx, l in enumerate(labels):
+        if area_weights[l_idx] == 0:
+            continue
+        brain.add_label(l,color=color, alpha=area_weights[l_idx])
+    spl_pts = np.empty((len(origins),3,lineres))
+    for idx in range(len(origins)):
+        curve = bezier.Curve(np.array([[origins[idx,0],spline_mids[idx,0],dests[idx,0]],
+                                      [origins[idx,1],spline_mids[idx,1],dests[idx,1]],
+                                      [origins[idx,2],spline_mids[idx,2],dests[idx,2]]]),
+                                      degree=2)
+        spl_pts[idx,] = curve.evaluate_multi(lingrad)
+        mlab.plot3d(spl_pts[idx,0,],spl_pts[idx,1,],spl_pts[idx,2,],
+                    lingrad*255,tube_radius=alphas[idx]*2,color=color,
                     opacity=alphas[idx])
 
     return brain

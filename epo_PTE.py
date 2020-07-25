@@ -58,7 +58,7 @@ band_info["gamma_1"] = {"freqs":list(np.arange(41,60)),"cycles":9}
 band_info["gamma_2"] = {"freqs":list(np.arange(60,91)),"cycles":9}
 cyc_names = ["theta_0","alpha_0","alpha_1","beta_0","beta_1","gamma_0",
              "gamma_1","gamma_2"]
-cyc_names = ["alpha_1"]
+cyc_names = ["theta_0"]
 
 cov = mne.read_cov("{}empty-cov.fif".format(proc_dir))
 fs_labels = mne.read_labels_from_annot("fsaverage", "RegionGrowing_70",
