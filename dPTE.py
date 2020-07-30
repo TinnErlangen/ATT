@@ -144,7 +144,19 @@ def _dPTE(phase, sfreq, delay=None, epsilon=1e-8):
 
 def epo_dPTE(data, freqs, sfreq, delay=None, n_cycles=None,
              phase_method="wavelet", freq_band=2, cuda=False, n_jobs=1):
-    ''' dPTE on epoched data: epoch*signal*time '''
+    ''' dPTE on epoched data: epoch*signal*time
+    data: e*c*t numpy array, e is epochs, c is channels/sources/t is samples
+    freqs: array-like of frequencies
+    sfreq: sampling rate
+    delay: delay in ms, if None then automatically calculate
+    phase_method: "wavelet" or "hilbert"
+    freq_band: only relevant when phase_method is "hilbert"
+
+    ------
+
+    returns e*c*c numpy array
+    '''
+
     phase = _instant_phase(data, freqs, sfreq, n_cycles=n_cycles,
                            method=phase_method, freq_band=freq_band, cuda=cuda)
     phase = phase.mean(axis=2)
