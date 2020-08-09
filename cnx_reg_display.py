@@ -25,23 +25,34 @@ stat_conds = [var_base+"[T."+cond+"]" for cond in conds[1:]] # convert simple co
 regs = {"left M1 central":"L3395-lh", "left M1 inferior":"L3969-lh",
         "left M1 superior":"L8143_L7523-lh","left sup-parietal":"L4557-lh",
         "left V1":"L2340_L1933-lh","left DS 0":"L2340-lh","left DS 1":"L2685-lh",
-        "left DS 2":"L928-lh","left VS 0":"L10017-lh","left VS 1":"L7097_5106-lh",
+        "left DS 2":"L928-lh","left VS 0":"L10017-lh","left VS 1":"L7097_L5106-lh",
         "left VS 2":"L7097_L4359-lh","left VS 3":"L5511_L4359-lh",
         "left VS 4":"L7049-lh", "left S1":"L7491_L4557-lh","left A1":"L2235-lh",
-        "left orbito-frontal":"L9249_L6698-lh",
+        "left A1 alt":"L7755-lh","left orbito-frontal":"L9249_L6698-lh",
         "left SMG inferior":"L5037-lh","left SMG superior":"L7491_L5037-lh"}
 
-cnx = [("left M1 central","left A1"),("left M1 central","left V1")]
+cnx = [("left A1","left M1 central"),("left VS 0","left M1 central"),
+       ("left VS 1","left M1 central"),("left VS 2","left M1 central"),
+       ("left VS 3","left M1 central"),("left VS 4","left M1 central"),
+       ("left V1","left M1 central"),("left orbito-frontal","left M1 central"),
+       ("left A1","left sup-parietal"),("left VS 0","left sup-parietal"),
+       ("left VS 1","left sup-parietal"),("left VS 2","left sup-parietal"),
+       ("left VS 3","left sup-parietal"),("left VS 4","left sup-parietal"),
+       ("left V1","left sup-parietal"),("left orbito-frontal","left sup-parietal"),
+       ("left DS 0","left M1 central"),("left DS 1","left M1 central"),
+       ("left DS 2","left M1 central"),("left DS 0","left sup-parietal"),
+       ("left DS 1","left sup-parietal"),("left DS 2","left sup-parietal")]
 
 with open("{}{}/aic.pickle".format(proc_dir,band), "rb") as f:
     aic_comps = pickle.load(f)
 
-plt.hist(aic_comps["single_winner_ids"])
-plt.title("Single winner IDs")
+# plt.hist(aic_comps["single_winner_ids"])
+# plt.title("Single winner IDs")
 
 triu_inds = np.triu_indices(mat_n, k=1)
 cnx_masks = {mod:np.zeros((mat_n,mat_n)) for mod in models}
 cnx_params = {stat_cond:np.zeros((mat_n,mat_n)) for stat_cond in stat_conds}
+cnx_confint = {stat_cond:np.zeros((mat_n,mat_n,2)) for stat_cond in stat_conds}
 brains = []
 colors = [(1,0,0),(0,1,0),(0,0,1)]
 models, colors = ["cond"], [(0,0,1)]
@@ -54,6 +65,9 @@ for color, mod in zip(colors, models):
             for stat_cond_idx,stat_cond in enumerate(stat_conds):
                 if aic_comps["sig_params"][n_idx][stat_cond_idx]:
                     cnx_params[stat_cond][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["sig_params"][n_idx][stat_cond_idx]
+                    cnx_params[stat_cond][triu_inds[1][n_idx],triu_inds[0][n_idx]] = -1 * aic_comps["sig_params"][n_idx][stat_cond_idx]
+                    cnx_confint[stat_cond][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["confint_params"][n_idx][stat_cond_idx]
+                    cnx_confint[stat_cond][triu_inds[1][n_idx],triu_inds[0][n_idx],] = -1 * np.flip(aic_comps["confint_params"][n_idx][stat_cond_idx])
 
 all_params = np.abs(np.array([cnx_params[stat_cond] for stat_cond in stat_conds]).flatten())
 all_params.sort()
@@ -65,11 +79,20 @@ params_brains = []
 #                          alpha_min=alpha_min,alpha_max=alpha_max,
 #                          ldown_title=cond, top_cnx=top_cnx))
 
+
 for c in cnx:
     plt.figure()
     plt.title("{} - {}".format(c[0],c[1]))
-    reg_inds = np.sort((label_names.index(regs[c[0]]),label_names.index(regs[c[1]])))
+    reg_inds = (label_names.index(regs[c[0]]),label_names.index(regs[c[1]]))
+    print(reg_inds)
     betas = []
+    confs = []
     for sc in stat_conds:
         betas.append(cnx_params[sc][reg_inds[0],reg_inds[1]])
-    plt.bar(np.arange(len(stat_conds)),np.array(betas))
+        confs.append(cnx_confint[sc][reg_inds[0],reg_inds[1],])
+    betas, confs = np.array(betas), np.array(confs).T
+    confs -= betas
+    print(betas)
+    print(confs)
+    plt.bar(np.arange(len(stat_conds)),np.array(betas),yerr=np.abs(confs),
+            tick_label=conds[1:])

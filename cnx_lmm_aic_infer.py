@@ -14,14 +14,14 @@ significance with the AIC, and visualise results
 
 proc_dir = "/home/jeff/ATT_dat/lmm/"
 sps_dir = "/home/jeff/ATT_dat/proc/"
-band = "alpha_1"
+band = "beta_0"
 node_n = 2415
 threshold = 0.001 # threshold for AIC comparison
 cond_threshold = 0.05 # theshold for condition p values
 parc = "RegionGrowing_70"
 labels = mne.read_labels_from_annot("fsaverage",parc)
 mat_n = len(labels)
-calc_aic = False #
+calc_aic = True
 top_cnx = 100
 bot_cnx = None
 
@@ -29,19 +29,25 @@ models = ["null","simple","cond"]
 vars = ["aics", "order", "probs", "threshed"] # these will form the main keys of aic_comps dictionary below
 var_base = "C(Block, Treatment('rest'))" # stem of the condition names in statsmodels format
 conds = ["rest","audio","visual","visselten","zaehlen"]
+#conds = ["rest","audio","visual","visselten"]
 stat_conds = [var_base+"[T."+cond+"]" for cond in conds[1:]] # convert simple cond names to statsmodels cond names
 
 if calc_aic:
-    aics = {mod:np.empty(node_n) for mod in models}
-    aics_pvals = {mod:[] for mod in models}
-    aics_params = {mod:[] for mod in models}
+    aics = {mod:np.zeros(node_n) for mod in models}
+    aics_pvals = {mod:[None for n in range(node_n)] for mod in models}
+    aics_params = {mod:[None for n in range(node_n)] for mod in models}
+    aics_confint = {mod:[None for n in range(node_n)] for mod in models}
     for mod in models:
         for n_idx in range(node_n):
             print(n_idx)
-            this_mod = MixedLMResults.load("{}{}/{}_reg70_lmm_{}.pickle".format(proc_dir,band,mod,n_idx))
+            try:
+                this_mod = MixedLMResults.load("{}{}/{}_reg70_lmm_{}.pickle".format(proc_dir,band,mod,n_idx))
+            except:
+                continue
             aics[mod][n_idx] = this_mod.aic
-            aics_pvals[mod].append(this_mod.pvalues)
-            aics_params[mod].append(this_mod.params)
+            aics_pvals[mod][n_idx] = this_mod.pvalues
+            aics_params[mod][n_idx] = this_mod.params
+            aics_confint[mod][n_idx] = this_mod.conf_int()
 
     aic_comps = {var:np.empty((node_n,len(models))) for var in vars}
     aic_comps["models"] = models
@@ -49,7 +55,12 @@ if calc_aic:
     aic_comps["winner_margin"] = np.empty(node_n)
     aic_comps["single_winner_ids"] = np.empty(node_n)
     aic_comps["sig_params"] = np.zeros((node_n,len(stat_conds)))
+    aic_comps["confint_params"] = np.zeros((node_n,len(stat_conds),2))
     for n_idx in range(node_n):
+        for mod in models:
+            if not aics[mod][n_idx]:
+                aic_comps["single_winner_ids"][n_idx] = None
+                continue
         aic_array = np.array([aics[mod][n_idx] for mod in models])
         aic_comps["aics"][n_idx,] = aic_array # store raw AIC values
         aic_prob = np.exp((aic_array.min()-aic_array)/2) # convert AIC to p-values; less than threshold indicates they are different than the mininum (best) fit
@@ -70,6 +81,7 @@ if calc_aic:
                 for stat_cond_idx,stat_cond in enumerate(stat_conds):
                     if aics_pvals["cond"][n_idx][stat_cond] < cond_threshold:
                         aic_comps["sig_params"][n_idx][stat_cond_idx] = aics_params["cond"][n_idx][stat_cond]
+                        aic_comps["confint_params"][n_idx][stat_cond_idx] = (aics_confint["cond"][n_idx].loc[stat_cond][0], aics_confint["cond"][n_idx].loc[stat_cond][1])
         else:
             aic_comps["single_winner_ids"][n_idx] = None
 
@@ -108,23 +120,23 @@ for stat_cond,cond in zip(stat_conds,["audio","visual","visselten","zaehlen"]):
                          alpha_min=alpha_min,alpha_max=alpha_max,
                          ldown_title=cond, top_cnx=top_cnx))
 
-sig_combs = []
-for sig_idx in range(len(aic_comps["sig_params"])):
-    row_sigs = tuple(np.where(aic_comps["sig_params"][sig_idx,])[0])
-    sig_combs.append(row_sigs)
-counts = dict(Counter(sig_combs))
-del counts[()]
-CnxOI = [(0,1,2),(0,1,2,3),(0,2),(0,),(1,2)]
-#CnxOI = [(0,2),(0,),(1,2)]
-cnx_oi = {coi:np.zeros((mat_n,mat_n)) for coi in CnxOI}
-coi_brains = []
-for coi in CnxOI:
-    for n_idx in range(node_n):
-        if sig_combs[n_idx] == coi:
-            cnx_oi[coi][triu_inds[0][n_idx],triu_inds[1][n_idx]] = 1
-    coi_brains.append(plot_undirected_cnx(cnx_oi[coi],labels,parc,
-                      ldown_title=str(coi), top_cnx=counts[coi],
-                      uniform_weight=True))
+# sig_combs = []
+# for sig_idx in range(len(aic_comps["sig_params"])):
+#     row_sigs = tuple(np.where(aic_comps["sig_params"][sig_idx,])[0])
+#     sig_combs.append(row_sigs)
+# counts = dict(Counter(sig_combs))
+# del counts[()]
+# CnxOI = [(0,1,2),(0,1,2,3),(0,2),(0,),(1,2)]
+# #CnxOI = [(0,2),(0,),(1,2)]
+# cnx_oi = {coi:np.zeros((mat_n,mat_n)) for coi in CnxOI}
+# coi_brains = []
+# for coi in CnxOI:
+#     for n_idx in range(node_n):
+#         if sig_combs[n_idx] == coi:
+#             cnx_oi[coi][triu_inds[0][n_idx],triu_inds[1][n_idx]] = 1
+#     coi_brains.append(plot_undirected_cnx(cnx_oi[coi],labels,parc,
+#                       ldown_title=str(coi), top_cnx=counts[coi],
+#                       uniform_weight=True))
 
 
 # # now load up dPTEs
