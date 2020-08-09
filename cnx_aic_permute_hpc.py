@@ -29,6 +29,7 @@ def mass_uv_mixedlmm(formula, data, uv_data, group_id, re_formula=None):
 parser = argparse.ArgumentParser()
 parser.add_argument('--perm', type=int, default=500)
 parser.add_argument('--band', type=str, required=True)
+parser.add_argument('--iter', type=int, default=0)
 opt = parser.parse_args()
 
 subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
@@ -124,5 +125,5 @@ for perm_idx in range(perm_n):
         aics["cond"][n_idx,perm_idx] = mods_cond[n_idx].aic
     del mods_cond
 
-with open("{}{}/perm_aic.pickle".format(proc_dir,band), "wb") as f:
+with open("{}{}/perm_aic_{}.pickle".format(proc_dir,band,opt.iter), "wb") as f:
     pickle.dump(aics,f)
