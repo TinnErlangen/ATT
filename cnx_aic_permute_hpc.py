@@ -91,11 +91,12 @@ print("done.")
 
 aics = {mod:np.zeros((node_n,perm_n)) for mod in models}
 
-formula = "Brain ~ 1"
-mods_null = mass_uv_mixedlmm(formula, dm_simple, data, group_id)
-for n_idx in range(node_n):
-    aics["null"][n_idx,] = np.broadcast_to(mods_null[n_idx].aic, perm_n)
-del mods_null
+if opt.iter == 0:
+    formula = "Brain ~ 1"
+    mods_null = mass_uv_mixedlmm(formula, dm_simple, data, group_id)
+    for n_idx in range(node_n):
+        aics["null"][n_idx,] = np.broadcast_to(mods_null[n_idx].aic, perm_n)
+    del mods_null
 
 # permute
 for perm_idx in range(perm_n):
