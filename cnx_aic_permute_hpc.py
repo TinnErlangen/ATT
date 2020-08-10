@@ -63,7 +63,7 @@ build up the dataframes and group_id which will eventually be passed to
 mass_uv_lmm. We will build two models here. "Simple" will make only one contrast:
 resting state and task. "Cond" makes distinctions for the different conditions.
 '''
-print("Building tables...", end="\r")
+print("Building tables...", end="")
 data = []
 predictor_vars = ("Subj","Block")
 dm_simple = pd.DataFrame(columns=predictor_vars)
