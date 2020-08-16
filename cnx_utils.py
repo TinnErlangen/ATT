@@ -172,7 +172,7 @@ def plot_directed_cnx(mat,labels,parc,fig=None,lup_title=None,ldown_title=None,r
                       subjects_dir="/home/jeff/freesurfer/subjects",
                       alpha_max=None, alpha_min=None, uniform_weight=False,
                       surface="inflated", alpha=1, top_cnx=50, bot_cnx=None,
-                      centre=0):
+                      centre=0, min_alpha=0.1):
     if mat.min() >= centre or mat.max() < centre:
         print("Warning: Values do not seem to match specified centre of {}.".format(centre))
     mat -= centre
@@ -242,7 +242,7 @@ def plot_directed_cnx(mat,labels,parc,fig=None,lup_title=None,ldown_title=None,r
         area_red[area_red>0] = 1
         area_blue[area_blue>0] = 1
     else:
-        alphas = ((np.abs(mat[inds[0],inds[1]])-alpha_min)/(alpha_max-alpha_min))
+        alphas = (1-min_alpha)*((np.abs(mat[inds[0],inds[1]])-alpha_min)/(alpha_max-alpha_min)) + min_alpha
         alphas[alphas<0],alphas[alphas>1] = 0, 1
 
     mlab.points3d(origins[:,0],origins[:,1],origins[:,2],

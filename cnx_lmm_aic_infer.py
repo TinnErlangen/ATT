@@ -14,16 +14,24 @@ significance with the AIC, and visualise results
 
 proc_dir = "/home/jeff/ATT_dat/lmm/"
 sps_dir = "/home/jeff/ATT_dat/proc/"
-band = "beta_0"
+band = "alpha_1"
 node_n = 2415
 threshold = 0.001 # threshold for AIC comparison
 cond_threshold = 0.05 # theshold for condition p values
 parc = "RegionGrowing_70"
 labels = mne.read_labels_from_annot("fsaverage",parc)
+label_names = [label.name for label in labels]
 mat_n = len(labels)
-calc_aic = True
-top_cnx = 100
+calc_aic = False
+top_cnx = 70
 bot_cnx = None
+
+ROI = "L3969-lh"  # M1 central
+ROI = "L3395-lh"  # M1 superior
+# ROI = "L8143_L7523-lh" # M1 dorsal
+# ROI = "L4557-lh"  # superior-parietal posterior
+# ROI = "L7491_L4557-lh"  # left sup-parietal anterior
+# ROI = None
 
 models = ["null","simple","cond"]
 vars = ["aics", "order", "probs", "threshed"] # these will form the main keys of aic_comps dictionary below
@@ -91,8 +99,8 @@ else:
     with open("{}{}/aic.pickle".format(proc_dir,band), "rb") as f:
         aic_comps = pickle.load(f)
 
-plt.hist(aic_comps["single_winner_ids"])
-plt.title("Single winner IDs")
+# plt.hist(aic_comps["single_winner_ids"])
+# plt.title("Single winner IDs")
 
 triu_inds = np.triu_indices(mat_n, k=1)
 cnx_masks = {mod:np.zeros((mat_n,mat_n)) for mod in models}
@@ -109,6 +117,14 @@ for color, mod in zip(colors, models):
             for stat_cond_idx,stat_cond in enumerate(stat_conds):
                 if aic_comps["sig_params"][n_idx][stat_cond_idx]:
                     cnx_params[stat_cond][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["sig_params"][n_idx][stat_cond_idx]
+
+if ROI:
+    ROI_idx = label_names.index(ROI)
+    for stat_cond in stat_conds:
+        mask_mat = np.zeros(cnx_params[stat_cond].shape)
+        mask_mat[:,ROI_idx] = np.ones(cnx_params[stat_cond].shape[0])
+        mask_mat[ROI_idx,:] = np.ones(cnx_params[stat_cond].shape[1])
+        cnx_params[stat_cond] *= mask_mat
 
 all_params = np.abs(np.array([cnx_params[stat_cond] for stat_cond in stat_conds]).flatten())
 all_params.sort()
