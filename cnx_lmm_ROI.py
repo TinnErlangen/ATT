@@ -41,72 +41,36 @@ conds = ["rest","audio","visual","visselten","zaehlen"]
 #conds = ["rest","audio","visual","visselten"]
 band = opt.band
 mat_n = 70
-ROI = []
+ROIs = []
 
 with open("{}{}/aic.pickle".format(proc_dir,band), "rb") as f:
     aic_comps = pickle.load(f)
 
 triu_inds = np.triu_indices(mat_n, k=1)
 cnx_masks = np.zeros((mat_n,mat_n))
-cnx_params = {stat_cond:np.zeros((mat_n,mat_n)) for stat_cond in stat_conds}
 mod_idx = aic_comps["models"].index(mod)
 for n_idx in range(node_n):
     if aic_comps["single_winner_ids"][n_idx] == mod_idx:
-        cnx_masks[mod][triu_inds[0][n_idx],triu_inds[1][n_idx]] = 1
-    if mod == "cond":
-        for stat_cond_idx,stat_cond in enumerate(stat_conds):
-            if aic_comps["sig_params"][n_idx][stat_cond_idx]:
-                cnx_params[stat_cond][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["sig_params"][n_idx][stat_cond_idx]
+        cnx_masks[triu_inds[0][n_idx],triu_inds[1][n_idx]] = 1
 
-'''
-build up the dataframes and group_id which will eventually be passed to
-mass_uv_lmm. We will build two models here. "Simple" will make only one contrast:
-resting state and task. "Cond" makes distinctions for the different conditions.
-'''
-data = []
-predictor_vars = ("Subj","Block")
-dm_simple = pd.DataFrame(columns=predictor_vars)
-dm_cond = dm_simple.copy()
+
+columns = ("Subj","Block","Region","Hemi")
+dm = pd.DataFrame(columns=columns)
 group_id = []
 for sub_idx,sub in enumerate(subjs):
     for cond_idx,cond in enumerate(conds):
         # we actually only need the dPTE to get the number of trials
-        data_temp = load_sparse("{}nc_{}_{}_dPTE_{}.sps".format(proc_dir, sub,
+        data = load_sparse("{}nc_{}_{}_dPTE_{}.sps".format(proc_dir, sub,
                                                                 cond, band))
         for epo_idx in range(data_temp.shape[0]):
-            c = cond if cond == "rest" else "task"
-            #
-            dm_simple = dm_simple.append({"Subj":sub, "Block":c}, ignore_index=True)
-            dm_cond = dm_cond.append({"Subj":sub, "Block":cond}, ignore_index=True)
-            data_col
-            data.append(phi(data_temp[epo_idx,], k=1)) # flatten upper diagonal of connectivity matrix, add it to the list
-            group_id.append(sub_idx)
-data = np.array(data)
+            for ROI in ROIs:
+                data_temp = data.copy()
+                ROI_idx = label_names.index(ROI)
+                reg_mask = np.zeros(cnx_params[stat_cond].shape)
+                reg_mask[:,ROI_idx] = np.ones(reg_mask.shape[0])
+                reg_mask[ROI_idx,:] = np.ones(reg_mask.shape[1])
+                data_temp *= reg_mask
+                c = cond if cond == "rest" else "task"
+                dm = dm.append({"Subj":sub, "Block":c}, ignore_index=True)
+                group_id.append(sub_idx)
 group_id = np.array(group_id)
-
-'''
-Finally, pass the variables along to mass_uv_lmm, for null, simple, and cond.
-The function returns a list of fitted LMM; each list member is a model fitted
-at a point of observation (e.g. vertex, voxel). Then save each member of the list.
-'''
-
-formula = "Brain ~ 1"
-mods_null = mass_uv_mixedlmm(formula, dm_simple, data, group_id)
-for mod_idx,mod in enumerate(mods_null):
-    if mod == None:
-        continue
-    mod.save("{}{}/null_reg70_lmm_{}.pickle".format(out_dir,opt.band,mod_idx))
-
-formula = "Brain ~ C(Block, Treatment('rest'))"
-mods_simple = mass_uv_mixedlmm(formula, dm_simple, data, group_id)
-for mod_idx,mod in enumerate(mods_simple):
-    if mod == None:
-        continue
-    mod.save("{}{}/simple_reg70_lmm_{}.pickle".format(out_dir,opt.band,mod_idx))
-
-formula = "Brain ~ C(Block, Treatment('rest'))"
-mods_cond = mass_uv_mixedlmm(formula, dm_cond, data, group_id)
-for mod_idx,mod in enumerate(mods_cond):
-    if mod == None:
-        continue
-    mod.save("{}{}/cond_reg70_lmm_{}.pickle".format(out_dir,opt.band,mod_idx))
