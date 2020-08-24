@@ -1,14 +1,10 @@
 import numpy as np
 import mne
-from cnx_utils import load_sparse, phi
+from cnx_utils import load_sparse
 import argparse
 import pickle
 from statsmodels.regression.mixed_linear_model import MixedLM
-from mne.stats.cluster_level import _setup_connectivity, _find_clusters, \
-    _reshape_clusters
 import pandas as pd
-import warnings
-warnings.filterwarnings("ignore")
 
 # get command line parameters
 parser = argparse.ArgumentParser()
@@ -41,20 +37,28 @@ conds = ["rest","audio","visual","visselten","zaehlen"]
 #conds = ["rest","audio","visual","visselten"]
 band = opt.band
 mat_n = 70
-ROIs = []
+node_n = 2415
+ROIs = ["L3969-lh","L3395-lh","L8143_L7523-lh"]
+ROIs = ["L7491_L4557-lh"]
+parc = "RegionGrowing_70"
+labels = mne.read_labels_from_annot("fsaverage",parc)
+label_names = [label.name for label in labels]
+triu_inds = np.triu_indices(mat_n, k=1)
 
-with open("{}{}/aic.pickle".format(proc_dir,band), "rb") as f:
+with open("{}{}/aic.pickle".format(out_dir,band), "rb") as f:
     aic_comps = pickle.load(f)
 
 triu_inds = np.triu_indices(mat_n, k=1)
 cnx_masks = np.zeros((mat_n,mat_n))
-mod_idx = aic_comps["models"].index(mod)
+mod_idx = 2
 for n_idx in range(node_n):
     if aic_comps["single_winner_ids"][n_idx] == mod_idx:
         cnx_masks[triu_inds[0][n_idx],triu_inds[1][n_idx]] = 1
+        cnx_masks[triu_inds[1][n_idx],triu_inds[0][n_idx]] = 1
 
 
-columns = ("Subj","Block","Region","Hemi")
+columns = ("Brain","Subj","Block","InRegion","OutRegion","Hemi")
+data_dict = {col:[] for col in columns}
 dm = pd.DataFrame(columns=columns)
 group_id = []
 for sub_idx,sub in enumerate(subjs):
@@ -62,15 +66,46 @@ for sub_idx,sub in enumerate(subjs):
         # we actually only need the dPTE to get the number of trials
         data = load_sparse("{}nc_{}_{}_dPTE_{}.sps".format(proc_dir, sub,
                                                                 cond, band))
-        for epo_idx in range(data_temp.shape[0]):
+        for epo_idx in range(data.shape[0]):
+            this_epo = data[epo_idx,].copy()
+            this_epo[triu_inds[1],triu_inds[0]] = 1 - this_epo[triu_inds[0],triu_inds[1]]
+            #print("Subject: {}, Condition: {}, Epoch: {}".format(sub,cond,epo_idx))
             for ROI in ROIs:
-                data_temp = data.copy()
                 ROI_idx = label_names.index(ROI)
-                reg_mask = np.zeros(cnx_params[stat_cond].shape)
-                reg_mask[:,ROI_idx] = np.ones(reg_mask.shape[0])
-                reg_mask[ROI_idx,:] = np.ones(reg_mask.shape[1])
-                data_temp *= reg_mask
-                c = cond if cond == "rest" else "task"
-                dm = dm.append({"Subj":sub, "Block":c}, ignore_index=True)
-                group_id.append(sub_idx)
+                cnx_col_inds = list(np.where(cnx_masks[ROI_idx,])[0])
+                for col_idx in cnx_col_inds:
+                    this_point = this_epo[ROI_idx,col_idx].copy()
+                    outname = label_names[col_idx]
+                    outhemi = "lh" if "lh" in outname else "rh"
+                    data_dict["Brain"].append(this_point)
+                    data_dict["Subj"].append(sub)
+                    data_dict["Block"].append(cond)
+                    data_dict["InRegion"].append(ROI)
+                    data_dict["OutRegion"].append(outname)
+                    data_dict["Hemi"].append(outhemi)
+                    group_id.append(sub_idx)
+dm = pd.DataFrame.from_dict(data_dict)
+dm_noZ = dm[dm["Block"]!="zaehlen"]
 group_id = np.array(group_id)
+group_id_noZ = group_id[dm["Block"]!="zaehlen"]
+
+this_dm = dm_noZ
+this_group_id = group_id_noZ
+this_dm = dm
+this_group_id = group_id
+
+formula = "Brain ~ C(Block, Treatment('rest'))"
+mod_simple = MixedLM.from_formula(formula, this_dm, groups=this_group_id)
+mf_simple = mod_simple.fit(reml=False)
+
+formula = "Brain ~ C(Block, Treatment('rest')) + C(InRegion, Treatment('{}'))*C(Block, Treatment('rest'))".format(ROIs[0])
+mod_inreg = MixedLM.from_formula(formula, this_dm, groups=this_group_id)
+mf_inreg = mod_inreg.fit(reml=False)
+
+formula = "Brain ~ C(Block, Treatment('rest')) + C(InRegion, Treatment('{}'))*C(Block, Treatment('rest')) + Hemi*C(Block, Treatment('rest'))".format(ROIs[-1])
+mod_hemi = MixedLM.from_formula(formula, this_dm, groups=this_group_id)
+mf_hemi = mod_hemi.fit(reml=False)
+
+# formula = "Brain ~ C(Block, Treatment('rest')) + C(InRegion, Treatment('{}'))*C(Block, Treatment('rest')) + OutRegion*C(Block, Treatment('rest'))".format(ROIs[0])
+# mod_outreg = MixedLM.from_formula(formula, this_dm, groups=this_group_id)
+# mf_outreg = mod_outreg.fit(reml=False)

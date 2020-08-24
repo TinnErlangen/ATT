@@ -22,7 +22,7 @@ class TriuSparse():
         with open(filename,"wb") as f:
             pickle.dump(out_dics,f)
 
-def load_sparse(filename,convert=True,nump_type="float32"):
+def load_sparse(filename,convert=True,full=False,nump_type="float32"):
     with open(filename,"rb") as f:
         result = pickle.load(f)
     if convert:
