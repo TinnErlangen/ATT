@@ -38,8 +38,7 @@ conds = ["rest","audio","visual","visselten","zaehlen"]
 band = opt.band
 mat_n = 70
 node_n = 2415
-ROIs = ["L3969-lh","L3395-lh","L8143_L7523-lh"]
-ROIs = ["L7491_L4557-lh"]
+ROIs = ["L3969-lh","L3395-lh","L8143_L7523-lh","L7491_L4557-lh"]
 parc = "RegionGrowing_70"
 labels = mne.read_labels_from_annot("fsaverage",parc)
 label_names = [label.name for label in labels]
@@ -59,7 +58,6 @@ for n_idx in range(node_n):
 
 columns = ("Brain","Subj","Block","InRegion","OutRegion","Hemi")
 data_dict = {col:[] for col in columns}
-dm = pd.DataFrame(columns=columns)
 group_id = []
 for sub_idx,sub in enumerate(subjs):
     for cond_idx,cond in enumerate(conds):
