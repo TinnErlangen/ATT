@@ -24,12 +24,12 @@ stat_conds = [var_base+"[T."+cond+"]" for cond in conds[1:]] # convert simple co
 
 regs = {"left M1 superior":"L3395-lh", "left M1 central":"L3969-lh",
         "left M1 dorsal":"L8143_L7523-lh","left sup-parietal posterior":"L4557-lh",
-        "left sup-parietal anterior":"L7491_L4557-lh","left V1":"L2340_L1933-lh",
-        "left DS 0":"L2340-lh","left DS 1":"L2685-lh",
+        "left S1 superior0":"L7491_L4557-lh","left S1 superior1":"L8143-lh",
+        "left V1":"L2340_L1933-lh","left DS 0":"L2340-lh","left DS 1":"L2685-lh",
         "left orbito-frontal posterior":"L6698_L1154-lh","left DS 2":"L928-lh",
         "left VS 0":"L10017-lh","left VS 1":"L7097_L5106-lh",
         "left VS 2":"L7097_L4359-lh","left VS 3":"L5511_L4359-lh",
-        "left VS 4":"L7049-lh", "left S1":"L7491_L4557-lh","left A1":"L2235-lh",
+        "left VS 4":"L7049-lh","left A1":"L2235-lh",
         "left A1 alt":"L7755-lh","left orbito-frontal anterior":"L9249_L6698-lh",
         "left SMG inferior":"L5037-lh","left SMG superior":"L7491_L5037-lh"}
 

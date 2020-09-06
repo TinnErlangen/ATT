@@ -31,7 +31,7 @@ ROI = "L3395-lh"  # M1 superior
 # ROI = "L8143_L7523-lh" # M1 dorsal
 # ROI = "L4557-lh"  # superior-parietal posterior
 # ROI = "L7491_L4557-lh"  # left sup-parietal anterior
-# ROI = None
+ROI = None
 
 models = ["null","simple","cond"]
 vars = ["aics", "order", "probs", "threshed"] # these will form the main keys of aic_comps dictionary below
