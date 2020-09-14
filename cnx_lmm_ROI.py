@@ -104,61 +104,58 @@ this_group_id = group_id_noZ
 this_dm = dm
 this_group_id = group_id
 
-formula = "Brain ~ C(Block, Treatment('rest'))"
-mod_simple = MixedLM.from_formula(formula, this_dm, groups=this_group_id)
-mf_simple = mod_simple.fit(reml=False)
+# formula = "Brain ~ C(Block, Treatment('rest'))"
+# mod_simple = MixedLM.from_formula(formula, this_dm, groups=this_group_id)
+# mf_simple = mod_simple.fit(reml=False)
+#
+# if inreg_consolidate:
+#     formula = "Brain ~ C(Block, Treatment('rest')) + InRegion*C(Block, Treatment('rest'))"
+# else:
+#     formula = "Brain ~ C(Block, Treatment('rest')) + C(InRegion, Treatment('left M1 central'))*C(Block, Treatment('rest'))"
+# mod_inreg = MixedLM.from_formula(formula, this_dm, groups=this_group_id)
+# mf_inreg = mod_inreg.fit(reml=False)
+#
+# if inreg_consolidate:
+#     formula = "Brain ~ C(Block, Treatment('rest'))*InRegion + C(Block, Treatment('rest'))*OutRegion"
+# else:
+#     formula = "Brain ~ C(Block, Treatment('rest')) + C(InRegion, Treatment('left M1 central'))*C(Block, Treatment('rest')) + OutRegion*C(Block, Treatment('rest'))"
+# mod_outreg = MixedLM.from_formula(formula, this_dm, groups=this_group_id)
+# mf_outreg = mod_outreg.fit(reml=False)
 
-if inreg_consolidate:
-    formula = "Brain ~ C(Block, Treatment('rest')) + InRegion*C(Block, Treatment('rest'))"
-else:
-    formula = "Brain ~ C(Block, Treatment('rest')) + C(InRegion, Treatment('left M1 central'))*C(Block, Treatment('rest'))"
-mod_inreg = MixedLM.from_formula(formula, this_dm, groups=this_group_id)
-mf_inreg = mod_inreg.fit(reml=False)
+reg = "M1"
+reg = "sup-parietal"
 
-if inreg_consolidate:
-    formula = "Brain ~ C(Block, Treatment('rest'))*InRegion + C(Block, Treatment('rest'))*OutRegion"
-else:
-    formula = "Brain ~ C(Block, Treatment('rest')) + C(InRegion, Treatment('left M1 central'))*C(Block, Treatment('rest')) + OutRegion*C(Block, Treatment('rest'))"
-mod_outreg = MixedLM.from_formula(formula, this_dm, groups=this_group_id)
-mf_outreg = mod_outreg.fit(reml=False)
-
-group_id_m1 = this_group_id[this_dm["InRegion"]=="M1"]
-dm_m1 = this_dm[this_dm["InRegion"]=="M1"]
-out_regions = list(set(dm_m1["OutRegion"].values))
-
+group_id_reg = this_group_id[this_dm["InRegion"]==reg]
+dm_reg = this_dm[this_dm["InRegion"]==reg]
+out_regions = list(set(dm_reg["OutRegion"].values))
 formula = "Brain ~ C(Block, Treatment('rest'))*OutRegion"
-mod_m1 = MixedLM.from_formula(formula, dm_m1, groups=group_id_m1)
-mf_m1 = mod_m1.fit(reml=False)
-cnx_m1 = {x:[] for x in ["OutRegion","Block","est_dPTE","t"]}
-for cond in conds[1:]:
-    for o_r in out_regions:
-        cnx_m1["OutRegion"].append(o_r)
-        cnx_m1["Block"].append(cond)
-        predictors = {"Block":cond,"OutRegion":o_r}
-        cnx_m1["est_dPTE"].append(mf_m1.predict(predictors)[0])
-        if o_r == dm_m1.iloc[0]["OutRegion"]:
-            cnx_m1["t"].append(mf_m1.tvalues["C(Block, Treatment('rest'))[T.{}]".format(cond)])
-        else:
-            cnx_m1["t"].append(mf_m1.tvalues["C(Block, Treatment('rest'))[T.{}]:OutRegion[T.{}]".format(cond,o_r)])
-cnx_m1 = pd.DataFrame.from_dict(cnx_m1)
-cnx_m1.to_pickle("{}cnx_m1.pickle".format(proc_dir))
 
-group_id_sp = this_group_id[this_dm["InRegion"]=="sup-parietal"]
-dm_sp = this_dm[this_dm["InRegion"]=="sup-parietal"]
-out_regions = list(set(dm_sp["OutRegion"].values))
-
-mod_sp = MixedLM.from_formula(formula, dm_sp, groups=group_id_sp)
-mf_sp = mod_sp.fit(reml=False)
-cnx_sp = {x:[] for x in ["OutRegion","Block","est_dPTE","t"]}
-for cond in conds[1:]:
+mod_reg = MixedLM.from_formula(formula, dm_reg, groups=group_id_reg)
+mf_reg = mod_reg.fit(reml=False)
+cnx_reg = {x:[] for x in ["OutRegion","Block","est_dPTE","coef","t","p"]}
+for cond in conds:
     for o_r in out_regions:
-        cnx_sp["OutRegion"].append(o_r)
-        cnx_sp["Block"].append(cond)
+        cnx_reg["OutRegion"].append(o_r)
+        cnx_reg["Block"].append(cond)
         predictors = {"Block":cond,"OutRegion":o_r}
-        cnx_sp["est_dPTE"].append(mf_sp.predict(predictors)[0])
-        if o_r == dm_sp.iloc[0]["OutRegion"]:
-            cnx_sp["t"].append(mf_sp.tvalues["C(Block, Treatment('rest'))[T.{}]".format(cond)])
+        cnx_reg["est_dPTE"].append(mf_reg.predict(predictors)[0])
+        if o_r == dm_reg.iloc[0]["OutRegion"]:
+            if cond == "rest":
+                cnx_reg["coef"].append(mf_reg.params["Intercept"])
+                cnx_reg["t"].append(mf_reg.tvalues["Intercept"])
+                cnx_reg["p"].append(mf_reg.pvalues["Intercept"])
+            else:
+                cnx_reg["coef"].append(mf_reg.params["C(Block, Treatment('rest'))[T.{}]".format(cond)])
+                cnx_reg["t"].append(mf_reg.tvalues["C(Block, Treatment('rest'))[T.{}]".format(cond)])
+                cnx_reg["p"].append(mf_reg.pvalues["C(Block, Treatment('rest'))[T.{}]".format(cond)])
         else:
-            cnx_sp["t"].append(mf_sp.tvalues["C(Block, Treatment('rest'))[T.{}]:OutRegion[T.{}]".format(cond,o_r)])
-cnx_sp = pd.DataFrame.from_dict(cnx_sp)
-cnx_sp.to_pickle("{}cnx_sp.pickle".format(proc_dir))
+            if cond == "rest":
+                cnx_reg["coef"].append(mf_reg.params["OutRegion[T.{}]".format(o_r)])
+                cnx_reg["t"].append(mf_reg.tvalues["OutRegion[T.{}]".format(o_r)])
+                cnx_reg["p"].append(mf_reg.pvalues["OutRegion[T.{}]".format(o_r)])
+            else:
+                cnx_reg["coef"].append(mf_reg.params["C(Block, Treatment('rest'))[T.{}]:OutRegion[T.{}]".format(cond,o_r)])
+                cnx_reg["t"].append(mf_reg.tvalues["C(Block, Treatment('rest'))[T.{}]:OutRegion[T.{}]".format(cond,o_r)])
+                cnx_reg["p"].append(mf_reg.pvalues["C(Block, Treatment('rest'))[T.{}]:OutRegion[T.{}]".format(cond,o_r)])
+cnx_reg = pd.DataFrame.from_dict(cnx_reg)
+cnx_reg.to_pickle("{}cnx_{}.pickle".format(proc_dir, reg))
