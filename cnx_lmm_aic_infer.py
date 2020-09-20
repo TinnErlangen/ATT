@@ -129,7 +129,7 @@ if ROI:
 all_params = np.abs(np.array([cnx_params[stat_cond] for stat_cond in stat_conds]).flatten())
 all_params.sort()
 alpha_max, alpha_min = all_params[-1:], all_params[-top_cnx].min()
-alpha_max, alpha_min = None, None
+alpha_max, alpha_min = 0.015, 0.002
 params_brains = []
 for stat_cond,cond in zip(stat_conds,["audio","visual","visselten","zaehlen"]):
     params_brains.append(plot_directed_cnx(cnx_params[stat_cond],labels,parc,
