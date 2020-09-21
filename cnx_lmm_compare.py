@@ -4,8 +4,6 @@ from cnx_utils import load_sparse, phi
 import argparse
 import pickle
 from statsmodels.regression.mixed_linear_model import MixedLM
-from mne.stats.cluster_level import _setup_connectivity, _find_clusters, \
-    _reshape_clusters
 import pandas as pd
 import warnings
 warnings.filterwarnings("ignore")
@@ -62,10 +60,13 @@ proc_dir = root_dir + "proc/"
 out_dir = root_dir + "lmm/"
 spacing = "ico4"
 conds = ["rest","audio","visual","visselten","zaehlen"]
-#conds = ["rest","audio","visual","visselten"]
+z_name = {}
 wavs = ["4000Hz","4000cheby","7000Hz","4000fftf"]
 band = opt.band
-
+no_Z = True
+if no_Z:
+    conds = ["rest","audio","visual","visselten"]
+    z_name = "no_Z"
 
 '''
 build up the dataframes and group_id which will eventually be passed to
@@ -102,18 +103,21 @@ mods_null = mass_uv_mixedlmm(formula, dm_simple, data, group_id)
 for mod_idx,mod in enumerate(mods_null):
     if mod == None:
         continue
-    mod.save("{}{}/null_reg70_lmm_{}.pickle".format(out_dir,opt.band,mod_idx))
+    mod.save("{}{}/null_reg70_lmm_{}{}.pickle".format(out_dir,opt.band,mod_idx,
+                                                      z_name))
 
 formula = "Brain ~ C(Block, Treatment('rest'))"
 mods_simple = mass_uv_mixedlmm(formula, dm_simple, data, group_id)
 for mod_idx,mod in enumerate(mods_simple):
     if mod == None:
         continue
-    mod.save("{}{}/simple_reg70_lmm_{}.pickle".format(out_dir,opt.band,mod_idx))
+    mod.save("{}{}/simple_reg70_lmm_{}{}.pickle".format(out_dir,opt.band,mod_idx,
+                                                        z_name))
 
 formula = "Brain ~ C(Block, Treatment('rest'))"
 mods_cond = mass_uv_mixedlmm(formula, dm_cond, data, group_id)
 for mod_idx,mod in enumerate(mods_cond):
     if mod == None:
         continue
-    mod.save("{}{}/cond_reg70_lmm_{}.pickle".format(out_dir,opt.band,mod_idx))
+    mod.save("{}{}/cond_reg70_lmm_{}{}.pickle".format(out_dir,opt.band,mod_idx,
+                                                    z_name))

@@ -25,6 +25,12 @@ mat_n = len(labels)
 calc_aic = False
 top_cnx = 70
 bot_cnx = None
+no_Z = True
+conds = ["rest","audio","visual","visselten","zaehlen"]
+z_name = ""
+if no_Z:
+    z_name = "no_Z"
+    conds = ["rest","audio","visual","visselten"]
 
 ROI = "L3969-lh"  # M1 central
 ROI = "L3395-lh"  # M1 superior
@@ -36,8 +42,7 @@ ROI = None
 models = ["null","simple","cond"]
 vars = ["aics", "order", "probs", "threshed"] # these will form the main keys of aic_comps dictionary below
 var_base = "C(Block, Treatment('rest'))" # stem of the condition names in statsmodels format
-conds = ["rest","audio","visual","visselten","zaehlen"]
-#conds = ["rest","audio","visual","visselten"]
+
 stat_conds = [var_base+"[T."+cond+"]" for cond in conds[1:]] # convert simple cond names to statsmodels cond names
 
 if calc_aic:
@@ -49,7 +54,7 @@ if calc_aic:
         for n_idx in range(node_n):
             print(n_idx)
             try:
-                this_mod = MixedLMResults.load("{}{}/{}_reg70_lmm_{}.pickle".format(proc_dir,band,mod,n_idx))
+                this_mod = MixedLMResults.load("{}{}/{}_reg70_lmm_{}{}.pickle".format(proc_dir,band,mod,n_idx,z_name))
             except:
                 continue
             aics[mod][n_idx] = this_mod.aic
@@ -93,10 +98,10 @@ if calc_aic:
         else:
             aic_comps["single_winner_ids"][n_idx] = None
 
-    with open("{}{}/aic.pickle".format(proc_dir,band), "wb") as f:
+    with open("{}{}/aic{}.pickle".format(proc_dir,band,z_name), "wb") as f:
         pickle.dump(aic_comps,f)
 else:
-    with open("{}{}/aic.pickle".format(proc_dir,band), "rb") as f:
+    with open("{}{}/aic{}.pickle".format(proc_dir,band,z_name), "rb") as f:
         aic_comps = pickle.load(f)
 
 # plt.hist(aic_comps["single_winner_ids"])
@@ -129,7 +134,7 @@ if ROI:
 all_params = np.abs(np.array([cnx_params[stat_cond] for stat_cond in stat_conds]).flatten())
 all_params.sort()
 alpha_max, alpha_min = all_params[-1:], all_params[-top_cnx].min()
-alpha_max, alpha_min = 0.015, 0.002
+alpha_max, alpha_min = 0.015, 0.001
 params_brains = []
 for stat_cond,cond in zip(stat_conds,["audio","visual","visselten","zaehlen"]):
     params_brains.append(plot_directed_cnx(cnx_params[stat_cond],labels,parc,
