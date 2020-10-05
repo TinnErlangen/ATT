@@ -1,6 +1,6 @@
 from statsmodels.regression.mixed_linear_model import MixedLMResults
 import numpy as np
-from cnx_utils import plot_undirected_cnx, plot_directed_cnx, load_sparse
+from cnx_utils import plot_undirected_cnx, plot_directed_cnx, plot_rgba_cnx, load_sparse
 import mne
 import pickle
 from collections import Counter
@@ -16,14 +16,14 @@ proc_dir = "/home/jeff/ATT_dat/lmm/"
 sps_dir = "/home/jeff/ATT_dat/proc/"
 band = "alpha_1"
 node_n = 2415
-threshold = 0.001 # threshold for AIC comparison
+threshold = 0.01 # threshold for AIC comparison
 cond_threshold = 0.05 # theshold for condition p values
 parc = "RegionGrowing_70"
 labels = mne.read_labels_from_annot("fsaverage",parc)
 label_names = [label.name for label in labels]
 mat_n = len(labels)
 calc_aic = False
-top_cnx = 70
+top_cnx = 50
 bot_cnx = None
 no_Z = True
 conds = ["rest","audio","visual","visselten","zaehlen"]
@@ -62,13 +62,16 @@ if calc_aic:
             aics_params[mod][n_idx] = this_mod.params
             aics_confint[mod][n_idx] = this_mod.conf_int()
 
-    aic_comps = {var:np.empty((node_n,len(models))) for var in vars}
+    aic_comps = {var:np.zeros((node_n,len(models))) for var in vars}
     aic_comps["models"] = models
-    aic_comps["winner_ids"] = np.empty(node_n)
-    aic_comps["winner_margin"] = np.empty(node_n)
-    aic_comps["single_winner_ids"] = np.empty(node_n)
+    aic_comps["winner_ids"] = np.zeros(node_n)
+    aic_comps["winner_margin"] = np.zeros(node_n)
+    aic_comps["single_winner_ids"] = np.zeros(node_n)
     aic_comps["sig_params"] = np.zeros((node_n,len(stat_conds)))
     aic_comps["confint_params"] = np.zeros((node_n,len(stat_conds),2))
+    aic_comps["dual_winner"] = np.zeros(node_n)
+    aic_comps["simple_sig_params"] = np.zeros(node_n)
+    aic_comps["simple_confint_params"] = np.zeros((node_n,2))
     for n_idx in range(node_n):
         for mod in models:
             if not aics[mod][n_idx]:
@@ -98,6 +101,15 @@ if calc_aic:
         else:
             aic_comps["single_winner_ids"][n_idx] = None
 
+        if np.array_equal(aic_comps["threshed"][n_idx], np.array([0,1,1])): # simple and cond model significantly better than null model
+            aic_comps["dual_winner"][n_idx] = 1 # mark 1 if all other models significantly different than best model
+            if aics_pvals["simple"][n_idx]["C(Block, Treatment('rest'))[T.task]"] < cond_threshold:
+                aic_comps["simple_sig_params"][n_idx] = aics_params["simple"][n_idx]["C(Block, Treatment('rest'))[T.task]"]
+                aic_comps["simple_confint_params"][n_idx] = (aics_confint["simple"][n_idx].loc["C(Block, Treatment('rest'))[T.task]"][0],
+                                                             aics_confint["simple"][n_idx].loc["C(Block, Treatment('rest'))[T.task]"][1])
+        else:
+            aic_comps["dual_winner"][n_idx] = None
+
     with open("{}{}/aic{}.pickle".format(proc_dir,band,z_name), "wb") as f:
         pickle.dump(aic_comps,f)
 else:
@@ -110,18 +122,14 @@ else:
 triu_inds = np.triu_indices(mat_n, k=1)
 cnx_masks = {mod:np.zeros((mat_n,mat_n)) for mod in models}
 cnx_params = {stat_cond:np.zeros((mat_n,mat_n)) for stat_cond in stat_conds}
-brains = []
-colors = [(1,0,0),(0,1,0),(0,0,1)]
-models, colors = ["cond"], [(0,0,1)]
-for color, mod in zip(colors, models):
-    mod_idx = aic_comps["models"].index(mod)
-    for n_idx in range(node_n):
-        if aic_comps["single_winner_ids"][n_idx] == mod_idx:
-            cnx_masks[mod][triu_inds[0][n_idx],triu_inds[1][n_idx]] = 1
-        if mod == "cond":
-            for stat_cond_idx,stat_cond in enumerate(stat_conds):
-                if aic_comps["sig_params"][n_idx][stat_cond_idx]:
-                    cnx_params[stat_cond][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["sig_params"][n_idx][stat_cond_idx]
+cnx_params["simple"] = np.zeros((mat_n,mat_n))
+
+for n_idx in range(node_n):
+    for stat_cond_idx,stat_cond in enumerate(stat_conds):
+        if aic_comps["sig_params"][n_idx][stat_cond_idx]:
+            cnx_params[stat_cond][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["sig_params"][n_idx][stat_cond_idx]
+    if aic_comps["dual_winner"][n_idx]:
+        cnx_params["simple"][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["simple_sig_params"][n_idx]
 
 if ROI:
     ROI_idx = label_names.index(ROI)
@@ -135,48 +143,30 @@ all_params = np.abs(np.array([cnx_params[stat_cond] for stat_cond in stat_conds]
 all_params.sort()
 alpha_max, alpha_min = all_params[-1:], all_params[-top_cnx].min()
 alpha_max, alpha_min = 0.015, 0.001
+alpha_max, alpha_min = None, None
 params_brains = []
-for stat_cond,cond in zip(stat_conds,["audio","visual","visselten","zaehlen"]):
-    params_brains.append(plot_directed_cnx(cnx_params[stat_cond],labels,parc,
-                         alpha_min=alpha_min,alpha_max=alpha_max,
-                         ldown_title=cond, top_cnx=top_cnx))
+# for stat_cond,cond in zip(stat_conds,conds[1:]):
+#     params_brains.append(plot_directed_cnx(cnx_params[stat_cond],labels,parc,
+#                          alpha_min=alpha_min,alpha_max=alpha_max,
+#                          ldown_title=cond, top_cnx=top_cnx))
+# params_brains.append(plot_directed_cnx(cnx_params["simple"],labels,parc,
+#                      alpha_min=None,alpha_max=None,
+#                      ldown_title="Simple", top_cnx=top_cnx))
 
-# sig_combs = []
-# for sig_idx in range(len(aic_comps["sig_params"])):
-#     row_sigs = tuple(np.where(aic_comps["sig_params"][sig_idx,])[0])
-#     sig_combs.append(row_sigs)
-# counts = dict(Counter(sig_combs))
-# del counts[()]
-# CnxOI = [(0,1,2),(0,1,2,3),(0,2),(0,),(1,2)]
-# #CnxOI = [(0,2),(0,),(1,2)]
-# cnx_oi = {coi:np.zeros((mat_n,mat_n)) for coi in CnxOI}
-# coi_brains = []
-# for coi in CnxOI:
-#     for n_idx in range(node_n):
-#         if sig_combs[n_idx] == coi:
-#             cnx_oi[coi][triu_inds[0][n_idx],triu_inds[1][n_idx]] = 1
-#     coi_brains.append(plot_undirected_cnx(cnx_oi[coi],labels,parc,
-#                       ldown_title=str(coi), top_cnx=counts[coi],
-#                       uniform_weight=True))
-
-
-# # now load up dPTEs
-# subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
-#          "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
-#          "ATT_24", "ATT_25", "ATT_26", "ATT_28", "ATT_31", "ATT_33",
-#          "ATT_34", "ATT_35", "ATT_36", "ATT_37"]
-#
-# # average by subject, hold resting state separate because it was baseline
-# dPTEs = [[] for cond in conds]
-# for sub in subjs:
-#     idx = 0
-#     for cond in conds:
-#         dPTE = load_sparse("{}nc_{}_{}_dPTE_{}.sps".format(sps_dir, sub,
-#                                                            cond, band))
-#         dPTEs[idx].append(dPTE.mean(axis=0))
-#         idx += 1
-# dPTEs = np.mean(dPTEs,axis=1)
-#
-# all_dPTEs = dPTEs.mean(axis=0)
-# task_dPTEs = np.array([dPTEs[0,],dPTEs[1:,].mean(axis=0)])
-# cond_dPTEs = dPTEs[1:,]
+# make 4D matrix with RGBA
+mat_rgba = np.zeros((mat_n, mat_n, 4))
+idx = 0
+for stat_cond in stat_conds:
+    if "zaehlen" in stat_cond:
+        continue
+    mat_rgba[...,idx] = abs(cnx_params[stat_cond])
+    idx += 1
+rgba_norm = np.linalg.norm(mat_rgba[...,:3],axis=2)
+for idx in range(3):
+    nonzero = np.where(rgba_norm)
+    for x,y in zip(*nonzero):
+        mat_rgba[x,y,idx] /= rgba_norm[x,y]
+rgba_norm = (rgba_norm-rgba_norm[rgba_norm>0].min())/(rgba_norm.max()-rgba_norm[rgba_norm>0].min())
+mat_rgba[...,-1] = rgba_norm
+params_brains.append(plot_rgba_cnx(mat_rgba, labels,parc,
+                     ldown_title="Rainbow", top_cnx=top_cnx))

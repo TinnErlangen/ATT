@@ -349,6 +349,72 @@ def plot_undirected_cnx(mat, labels, parc, fig=None, lup_title=None,
 
     return brain
 
+def plot_rgba_cnx(mat_rgba, labels, parc, fig=None, lup_title=None,
+                  ldown_title=None, rup_title=None, rdown_title=None,
+                  figsize=(3840,2160), lineres=1000,
+                  subjects_dir="/home/jeff/freesurfer/subjects",
+                  uniform_weight=False, surface="inflated", brain_alpha=1,
+                  top_cnx=50, bot_cnx=None):
+
+    matflat = mat_rgba[...,-1].flatten()
+    if top_cnx is not None:
+        thresh = np.sort(matflat[matflat>0])[-top_cnx]
+        mat_rgba[mat_rgba[...,-1]<thresh,:] = 0
+    if bot_cnx is not None:
+        thresh = np.sort(matflat[matflat>0])[-bot_cnx]
+        mat_rgba[np.abs(mat_rgba)>thresh] = 0
+    alpha = mat_rgba[...,-1].copy()
+    alpha[alpha>0] = (alpha[alpha>0] - alpha[alpha>0].min()) / (alpha.max() - alpha[alpha>0].min())
+    mat_rgba[...,-1] = alpha
+
+    lingrad = np.linspace(0,1,lineres)
+    if fig is None:
+        fig = mlab.figure(size=figsize)
+    brain = Brain('fsaverage', 'both', surface, alpha=brain_alpha,
+                  subjects_dir=subjects_dir, figure=fig)
+    if lup_title:
+        brain.add_text(0, 0.8, lup_title, "lup", font_size=40)
+    if ldown_title:
+        brain.add_text(0, 0, ldown_title, "ldown", font_size=40)
+    if rup_title:
+        brain.add_text(0.7, 0.8, rup_title, "rup", font_size=40)
+    if rdown_title:
+        brain.add_text(0.7, 0., rdown_title, "rdown", font_size=40)
+    brain.add_annotation(parc,color="black")
+    rrs = np.array([brain.geo[l.hemi].coords[l.center_of_mass()] for l in labels])
+
+    inds = np.where(mat_rgba[...,-1]>0)
+    origins = rrs[inds[0],]
+    dests = rrs[inds[1],]
+
+    lengths = np.linalg.norm(origins-dests, axis=1)
+    lengths = np.broadcast_to(lengths,(3,len(lengths))).T
+    midpoints = (origins+dests)/2
+    midpoint_units = midpoints/np.linalg.norm(midpoints,axis=1,keepdims=True)
+    spline_mids = midpoints + midpoint_units*lengths*2
+
+    spl_pts = np.empty((len(origins),3,lineres))
+    for idx in range(len(origins)):
+        color = (mat_rgba[inds[0][idx], inds[1][idx], 0],
+                 mat_rgba[inds[0][idx], inds[1][idx], 1],
+                 mat_rgba[inds[0][idx], inds[1][idx], 2])
+        alpha = mat_rgba[inds[0][idx], inds[1][idx], 3]
+        curve = bezier.Curve(np.array([[origins[idx,0],spline_mids[idx,0],dests[idx,0]],
+                                       [origins[idx,1],spline_mids[idx,1],dests[idx,1]],
+                                       [origins[idx,2],spline_mids[idx,2],dests[idx,2]]]),
+                                       degree=2)
+        spl_pts[idx,] = curve.evaluate_multi(lingrad)
+        mlab.plot3d(spl_pts[idx,0,], spl_pts[idx,1,], spl_pts[idx,2,],
+                    lingrad*255, tube_radius=alpha*2, color=color,
+                    opacity=alpha)
+        # origin points
+        mlab.points3d(origins[idx,0],origins[idx,1],origins[idx,2],
+                      alpha,scale_factor=10,color=color,transparent=True)
+        mlab.points3d(dests[idx,0],dests[idx,1],dests[idx,2],
+                      alpha,scale_factor=10,color=color,transparent=True)
+
+    return brain
+
 """ calculate the corelation distance of dPTE connectivity matrices """
 def pw_cor_dist(mat,inds):
     k = len(inds)

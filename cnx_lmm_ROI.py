@@ -29,11 +29,19 @@ band_info["gamma_2"] = {"freqs":list(np.arange(60,91)),"cycles":9}
 
 ROIs = {"left M1 superior":"L3395-lh", "left M1 central":"L3969-lh",
         "left M1 dorsal":"L8143_L7523-lh","left S1 superior0":"L7491_L4557-lh",
-        "left S1 superior1":"L8143-lh","left sup-parietal":"L4557-lh"}
-inreg_groups = {"left M1 superior":"M1", "left M1 central":"M1",
-                "left M1 dorsal":"M1","left S1 superior0":"sup-parietal",
-                "left S1 superior1":"sup-parietal",
-                "left sup-parietal":"sup-parietal"}
+        "left S1 superior1":"L8143-lh","left sup-parietal":"L4557-lh",
+        "right M1 superior":"L3395-rh", "right M1 central":"L3969-rh",
+        "right M1 dorsal":"L8143_L7523-rh","right S1 superior0":"L7491_L4557-rh",
+        "right S1 superior1":"L8143-rh","right sup-parietal":"L4557-rh"}
+ROIs_inv = {v:k for k,v in ROIs.items()}
+inreg_groups = {"left M1 superior":"left_M1", "left M1 central":"left_M1",
+                "left M1 dorsal":"left_M1","left S1 superior0":"left_sup-parietal",
+                "left S1 superior1":"left_sup-parietal",
+                "left sup-parietal":"left_sup-parietal",
+                "right M1 superior":"right_M1", "right M1 central":"right_M1",
+                "right M1 dorsal":"right_M1","right S1 superior0":"right_sup-parietal",
+                "right S1 superior1":"right_sup-parietal",
+                "right sup-parietal":"right_sup-parietal"}
 
 # parameters and setup
 root_dir = "/home/jeff/ATT_dat/"
@@ -41,8 +49,7 @@ root_dir = "/home/jeff/ATT_dat/"
 proc_dir = root_dir + "proc/"
 out_dir = root_dir + "lmm/"
 spacing = "ico4"
-conds = ["rest","audio","visual","visselten","zaehlen"]
-#conds = ["rest","audio","visual","visselten"]
+
 band = opt.band
 mat_n = 70
 node_n = 2415
@@ -51,6 +58,7 @@ labels = mne.read_labels_from_annot("fsaverage",parc)
 label_names = [label.name for label in labels]
 triu_inds = np.triu_indices(mat_n, k=1)
 inreg_consolidate = True
+no_Z = False
 
 with open("{}{}/aic.pickle".format(out_dir,band), "rb") as f:
     aic_comps = pickle.load(f)
@@ -62,6 +70,11 @@ for n_idx in range(node_n):
     if aic_comps["single_winner_ids"][n_idx] == mod_idx:
         cnx_masks[triu_inds[0][n_idx],triu_inds[1][n_idx]] = 1
         cnx_masks[triu_inds[1][n_idx],triu_inds[0][n_idx]] = 1
+
+if no_Z:
+    conds = ["rest","audio","visual","visselten"]
+else:
+    conds = ["rest","audio","visual","visselten","zaehlen"]
 
 
 columns = ("Brain","Subj","Block","InRegion","OutRegion","Hemi")
@@ -88,6 +101,10 @@ for sub_idx,sub in enumerate(subjs):
                     data_dict["Block"].append(cond)
                     if inreg_consolidate:
                         this_reg = inreg_groups[k]
+                        if outname in list(ROIs_inv.keys()):
+                            if inreg_groups[ROIs_inv[outname]] == this_reg:
+                                print("hi {}".format(outname))
+                                continue
                     else:
                         this_reg = k
                     data_dict["InRegion"].append(this_reg)
@@ -95,14 +112,14 @@ for sub_idx,sub in enumerate(subjs):
                     data_dict["Hemi"].append(outhemi)
                     group_id.append(sub_idx)
 dm = pd.DataFrame.from_dict(data_dict)
-dm_noZ = dm[dm["Block"]!="zaehlen"]
 group_id = np.array(group_id)
-group_id_noZ = group_id[dm["Block"]!="zaehlen"]
 
-this_dm = dm_noZ
-this_group_id = group_id_noZ
-this_dm = dm
-this_group_id = group_id
+if no_Z:
+    this_dm = dm[dm["Block"]!="zaehlen"]
+    this_group_id = group_id[dm["Block"]!="zaehlen"]
+else:
+    this_dm = dm
+    this_group_id = group_id
 
 # formula = "Brain ~ C(Block, Treatment('rest'))"
 # mod_simple = MixedLM.from_formula(formula, this_dm, groups=this_group_id)
@@ -122,40 +139,43 @@ this_group_id = group_id
 # mod_outreg = MixedLM.from_formula(formula, this_dm, groups=this_group_id)
 # mf_outreg = mod_outreg.fit(reml=False)
 
-reg = "M1"
-reg = "sup-parietal"
 
-group_id_reg = this_group_id[this_dm["InRegion"]==reg]
-dm_reg = this_dm[this_dm["InRegion"]==reg]
-out_regions = list(set(dm_reg["OutRegion"].values))
-formula = "Brain ~ C(Block, Treatment('rest'))*OutRegion"
+regs = ["left_M1", "right_M1", "left_sup-parietal", "right_sup-parietal"]
+for reg in regs:
+    group_id_reg = this_group_id[this_dm["InRegion"]==reg]
+    dm_reg = this_dm[this_dm["InRegion"]==reg]
+    out_regions = list(set(dm_reg["OutRegion"].values))
+    formula = "Brain ~ C(Block, Treatment('rest'))*OutRegion"
 
-mod_reg = MixedLM.from_formula(formula, dm_reg, groups=group_id_reg)
-mf_reg = mod_reg.fit(reml=False)
-cnx_reg = {x:[] for x in ["OutRegion","Block","est_dPTE","coef","t","p"]}
-for cond in conds:
-    for o_r in out_regions:
-        cnx_reg["OutRegion"].append(o_r)
-        cnx_reg["Block"].append(cond)
-        predictors = {"Block":cond,"OutRegion":o_r}
-        cnx_reg["est_dPTE"].append(mf_reg.predict(predictors)[0])
-        if o_r == dm_reg.iloc[0]["OutRegion"]:
-            if cond == "rest":
-                cnx_reg["coef"].append(mf_reg.params["Intercept"])
-                cnx_reg["t"].append(mf_reg.tvalues["Intercept"])
-                cnx_reg["p"].append(mf_reg.pvalues["Intercept"])
+    mod_reg = MixedLM.from_formula(formula, dm_reg, groups=group_id_reg)
+    mf_reg = mod_reg.fit(reml=False)
+    cnx_reg = {x:[] for x in ["OutRegion","Block","est_dPTE","coef","t","p"]}
+    for cond in conds:
+        for o_r in out_regions:
+            cnx_reg["OutRegion"].append(o_r)
+            cnx_reg["Block"].append(cond)
+            predictors = {"Block":cond,"OutRegion":o_r}
+            cnx_reg["est_dPTE"].append(mf_reg.predict(predictors)[0])
+            if o_r == dm_reg.iloc[0]["OutRegion"]:
+                if cond == "rest":
+                    cnx_reg["coef"].append(mf_reg.params["Intercept"])
+                    cnx_reg["t"].append(mf_reg.tvalues["Intercept"])
+                    cnx_reg["p"].append(mf_reg.pvalues["Intercept"])
+                else:
+                    cnx_reg["coef"].append(mf_reg.params["C(Block, Treatment('rest'))[T.{}]".format(cond)])
+                    cnx_reg["t"].append(mf_reg.tvalues["C(Block, Treatment('rest'))[T.{}]".format(cond)])
+                    cnx_reg["p"].append(mf_reg.pvalues["C(Block, Treatment('rest'))[T.{}]".format(cond)])
             else:
-                cnx_reg["coef"].append(mf_reg.params["C(Block, Treatment('rest'))[T.{}]".format(cond)])
-                cnx_reg["t"].append(mf_reg.tvalues["C(Block, Treatment('rest'))[T.{}]".format(cond)])
-                cnx_reg["p"].append(mf_reg.pvalues["C(Block, Treatment('rest'))[T.{}]".format(cond)])
-        else:
-            if cond == "rest":
-                cnx_reg["coef"].append(mf_reg.params["OutRegion[T.{}]".format(o_r)])
-                cnx_reg["t"].append(mf_reg.tvalues["OutRegion[T.{}]".format(o_r)])
-                cnx_reg["p"].append(mf_reg.pvalues["OutRegion[T.{}]".format(o_r)])
-            else:
-                cnx_reg["coef"].append(mf_reg.params["C(Block, Treatment('rest'))[T.{}]:OutRegion[T.{}]".format(cond,o_r)])
-                cnx_reg["t"].append(mf_reg.tvalues["C(Block, Treatment('rest'))[T.{}]:OutRegion[T.{}]".format(cond,o_r)])
-                cnx_reg["p"].append(mf_reg.pvalues["C(Block, Treatment('rest'))[T.{}]:OutRegion[T.{}]".format(cond,o_r)])
-cnx_reg = pd.DataFrame.from_dict(cnx_reg)
-cnx_reg.to_pickle("{}cnx_{}.pickle".format(proc_dir, reg))
+                if cond == "rest":
+                    cnx_reg["coef"].append(mf_reg.params["OutRegion[T.{}]".format(o_r)])
+                    cnx_reg["t"].append(mf_reg.tvalues["OutRegion[T.{}]".format(o_r)])
+                    cnx_reg["p"].append(mf_reg.pvalues["OutRegion[T.{}]".format(o_r)])
+                else:
+                    cnx_reg["coef"].append(mf_reg.params["C(Block, Treatment('rest'))[T.{}]:OutRegion[T.{}]".format(cond,o_r)])
+                    cnx_reg["t"].append(mf_reg.tvalues["C(Block, Treatment('rest'))[T.{}]:OutRegion[T.{}]".format(cond,o_r)])
+                    cnx_reg["p"].append(mf_reg.pvalues["C(Block, Treatment('rest'))[T.{}]:OutRegion[T.{}]".format(cond,o_r)])
+    cnx_reg = pd.DataFrame.from_dict(cnx_reg)
+    if no_Z:
+        cnx_reg.to_pickle("{}{}/cnx_{}_no_Z.pickle".format(out_dir, band, reg))
+    else:
+        cnx_reg.to_pickle("{}{}/cnx_{}.pickle".format(out_dir, band, reg))
