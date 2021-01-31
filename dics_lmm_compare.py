@@ -96,7 +96,7 @@ for filename in filelist:
     stc = mne.read_source_estimate("{}/stcs/{}".format(proc_dir,filename))
     stc = morphs[trial_info[0]].apply(stc)
     for reg_idx,reg in enumerate(regions):
-        temp_data = mne.extract_label_time_course(stc,reg,fs_src,mode="pca_flip")
+        temp_data = mne.extract_label_time_course(stc,reg,fs_src,mode="mean")
         data[reg_idx].append(temp_data.mean())
 data = np.array(data) * 1e+26
 

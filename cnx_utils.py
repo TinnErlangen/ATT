@@ -415,6 +415,32 @@ def plot_rgba_cnx(mat_rgba, labels, parc, fig=None, lup_title=None,
 
     return brain
 
+def plot_rgba(vec_rgba, labels, parc, fig=None, lup_title=None, ldown_title=None,
+              rup_title=None, rdown_title=None, figsize=(3840,2160),
+              subjects_dir="/home/jeff/freesurfer/subjects",
+              uniform_weight=False, surface="inflated", brain_alpha=1):
+
+    if fig is None:
+        fig = mlab.figure(size=figsize)
+    brain = Brain('fsaverage', 'both', surface, alpha=brain_alpha,
+                   subjects_dir=subjects_dir, figure=fig)
+    if lup_title:
+        brain.add_text(0, 0.8, lup_title, "lup", font_size=40)
+    if ldown_title:
+        brain.add_text(0, 0, ldown_title, "ldown", font_size=40)
+    if rup_title:
+        brain.add_text(0.7, 0.8, rup_title, "rup", font_size=40)
+    if rdown_title:
+        brain.add_text(0.7, 0., rdown_title, "rdown", font_size=40)
+    brain.add_annotation(parc,color="black")
+
+    for l_idx, l in enumerate(labels):
+        if np.array_equal(vec_rgba[l_idx], [0,0,0,0]):
+            continue
+        brain.add_label(l, color=vec_rgba[l_idx,:3], alpha=vec_rgba[l_idx,3])
+
+    return brain
+
 """ calculate the corelation distance of dPTE connectivity matrices """
 def pw_cor_dist(mat,inds):
     k = len(inds)

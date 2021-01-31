@@ -4,9 +4,13 @@ import pickle
 from mne.time_frequency import csd_morlet
 import numpy as np
 
-doTones = True
+doTones = False
 proc_dir = "../proc/"
 subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
+         "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
+         "ATT_24", "ATT_25", "ATT_26", "ATT_28", "ATT_29", "ATT_31", "ATT_33",
+         "ATT_34", "ATT_35", "ATT_36", "ATT_37"]
+subjs = ["ATT_14", "ATT_15", "ATT_16",
          "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
          "ATT_24", "ATT_25", "ATT_26", "ATT_28", "ATT_29", "ATT_31", "ATT_33",
          "ATT_34", "ATT_35", "ATT_36", "ATT_37"]
@@ -17,9 +21,9 @@ subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
 band_info = {}
 # band_info["theta_0"] = {"freqs":list(np.arange(3,7)),"cycles":3}
 # band_info["alpha_0"] = {"freqs":list(np.arange(7,10)),"cycles":5}
-# band_info["alpha_1"] = {"freqs":list(np.arange(10,13)),"cycles":7}
+band_info["alpha_1"] = {"freqs":list(np.arange(10,13)),"cycles":7}
 # band_info["beta_0"] = {"freqs":list(np.arange(13,22)),"cycles":9}
-band_info["beta_1"] = {"freqs":list(np.arange(22,31)),"cycles":9}
+# band_info["beta_1"] = {"freqs":list(np.arange(22,31)),"cycles":9}
 # band_info["gamma_0"] = {"freqs":list(np.arange(31,41)),"cycles":9}
 # band_info["gamma_1"] = {"freqs":list(np.arange(41,60)),"cycles":9}
 # band_info["gamma_2"] = {"freqs":list(np.arange(60,90)),"cycles":9}

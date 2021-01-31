@@ -34,7 +34,7 @@ regs = {"left M1 superior":"L3395-lh", "left M1 central":"L3969-lh",
         "left SMG inferior":"L5037-lh","left SMG superior":"L7491_L5037-lh"}
 
 m1_complex = {"name":"M1 Complex","areas":("left M1 central","left M1 superior")}
-sp_complex = {"name":"SP Complex","areas":("left sup-parietal posterior", "left sup-parietal anterior")}
+sp_complex = {"name":"SP Complex","areas":("left sup-parietal posterior", "left S1 superior0")}
 cnx = [("left A1",m1_complex),("left VS 0",m1_complex),
        ("left VS 1",m1_complex),("left VS 2",m1_complex),
        ("left VS 3",m1_complex),("left VS 4",m1_complex),
@@ -107,7 +107,7 @@ for c in cnx:
             plt.bar(this_x,np.array(betas),bar_width,yerr=np.abs(confs),label=c0)
     elif type(c[1]) == dict:
         plt.title("{} - {}".format(c[0],c[1]["name"]))
-        for this_x,c1 in zip(xs,c[1]["areas"]):
+        for this_x, c1 in zip(xs, c[1]["areas"]):
             reg_inds = (label_names.index(regs[c[0]]),label_names.index(regs[c1]))
             betas = []
             confs = []

@@ -30,7 +30,7 @@ for cr in constrain_regs:
     if "-rh" in labels[cr].name:
         continue
     figs.append(mlab.figure(labels[cr].name))
-    brains.append(Brain('fsaverage', 'both', 'inflated',
+    brains.append(Brain('fsaverage', 'lh', 'inflated',
                   subjects_dir=subjects_dir, figure=figs[-1], alpha=0.99))
     brains[-1].add_annotation(parc, color="black")
     brains[-1].add_label(labels[cr])

@@ -4,8 +4,15 @@ from cnx_utils import plot_undirected_cnx, plot_directed_cnx, plot_rgba_cnx, loa
 import mne
 import pickle
 from collections import Counter
+from mayavi import mlab
 import matplotlib.pyplot as plt
 plt.ion()
+
+
+def write_image(name, views):
+    for k,v in views.items():
+        mlab.view(*v)
+        mlab.savefig("{}_{}.png".format(name,k))
 
 '''
 Here we want to load up the results calculated in cnx_lmm_compare, infer
@@ -16,7 +23,7 @@ proc_dir = "/home/jeff/ATT_dat/lmm/"
 sps_dir = "/home/jeff/ATT_dat/proc/"
 band = "alpha_1"
 node_n = 2415
-threshold = 0.01 # threshold for AIC comparison
+threshold = 0.001 # threshold for AIC comparison
 cond_threshold = 0.05 # theshold for condition p values
 parc = "RegionGrowing_70"
 labels = mne.read_labels_from_annot("fsaverage",parc)
@@ -26,6 +33,7 @@ calc_aic = False
 top_cnx = 50
 bot_cnx = None
 no_Z = True
+write_images = True
 conds = ["rest","audio","visual","visselten","zaehlen"]
 z_name = ""
 if no_Z:
@@ -38,6 +46,11 @@ ROI = "L3395-lh"  # M1 superior
 # ROI = "L4557-lh"  # superior-parietal posterior
 # ROI = "L7491_L4557-lh"  # left sup-parietal anterior
 ROI = None
+
+views = {"left":(174.04705636967836, 88.55890357825739, 941.4741554564995, [50.94759019, -8.48534077,  1.71607074]),
+         "right":(-0.6174341041313067, 88.85279275719549, 941.4741554565016, [50.94759019, -8.48534077,  1.71607074]),
+         "upper":(-92.63891483324943, 31.307442385470907, 1139.1837281022597, [-7.28569954, -25.69044091, -13.22133731])
+}
 
 models = ["null","simple","cond"]
 vars = ["aics", "order", "probs", "threshed"] # these will form the main keys of aic_comps dictionary below
@@ -116,8 +129,8 @@ else:
     with open("{}{}/aic{}.pickle".format(proc_dir,band,z_name), "rb") as f:
         aic_comps = pickle.load(f)
 
-# plt.hist(aic_comps["single_winner_ids"])
-# plt.title("Single winner IDs")
+plt.hist(aic_comps["winner_ids"])
+plt.title("Winner IDs")
 
 triu_inds = np.triu_indices(mat_n, k=1)
 cnx_masks = {mod:np.zeros((mat_n,mat_n)) for mod in models}
@@ -145,15 +158,19 @@ alpha_max, alpha_min = all_params[-1:], all_params[-top_cnx].min()
 alpha_max, alpha_min = 0.015, 0.001
 alpha_max, alpha_min = None, None
 params_brains = []
-# for stat_cond,cond in zip(stat_conds,conds[1:]):
-#     params_brains.append(plot_directed_cnx(cnx_params[stat_cond],labels,parc,
-#                          alpha_min=alpha_min,alpha_max=alpha_max,
-#                          ldown_title=cond, top_cnx=top_cnx))
-# params_brains.append(plot_directed_cnx(cnx_params["simple"],labels,parc,
-#                      alpha_min=None,alpha_max=None,
-#                      ldown_title="Simple", top_cnx=top_cnx))
+for stat_cond,cond in zip(stat_conds,conds[1:]):
+    params_brains.append(plot_directed_cnx(cnx_params[stat_cond],labels,parc,
+                         alpha_min=alpha_min,alpha_max=alpha_max,
+                         ldown_title=cond, top_cnx=top_cnx))
+    if write_images:
+        write_image(cond, views)
+params_brains.append(plot_directed_cnx(cnx_params["simple"],labels,parc,
+                     alpha_min=None,alpha_max=None,
+                     ldown_title="Simple", top_cnx=100))
+if write_images:
+    write_image("simple", views)
 
-# make 4D matrix with RGBA
+#make 4D matrix with RGBA
 mat_rgba = np.zeros((mat_n, mat_n, 4))
 idx = 0
 for stat_cond in stat_conds:
@@ -166,7 +183,10 @@ for idx in range(3):
     nonzero = np.where(rgba_norm)
     for x,y in zip(*nonzero):
         mat_rgba[x,y,idx] /= rgba_norm[x,y]
-rgba_norm = (rgba_norm-rgba_norm[rgba_norm>0].min())/(rgba_norm.max()-rgba_norm[rgba_norm>0].min())
+#rgba_norm = (rgba_norm-rgba_norm[rgba_norm>0].min())/(rgba_norm.max()-rgba_norm[rgba_norm>0].min())
 mat_rgba[...,-1] = rgba_norm
-params_brains.append(plot_rgba_cnx(mat_rgba, labels,parc,
-                     ldown_title="Rainbow", top_cnx=top_cnx))
+params_brains.append(plot_rgba_cnx(mat_rgba.copy(), labels, parc,
+                     ldown_title="Rainbow", top_cnx=None))
+
+if write_images:
+    write_image("rainbow", views)
