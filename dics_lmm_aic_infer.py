@@ -6,16 +6,19 @@ import pickle
 import matplotlib.pyplot as plt
 plt.ion()
 
-proc_dir = "/home/jeff/ATT_dat/lmm_dics/"
+proc_dir = "/home/jev/ATT_dat/lmm_dics/"
 band = "alpha_1"
 node_n = 70
 threshold = 0.05
 cond_threshold = 0.05
 parc = "RegionGrowing_70"
-labels = mne.read_labels_from_annot("fsaverage",parc)
+labels = mne.read_labels_from_annot("fsaverage", parc)
 mat_n = len(labels)
 calc_aic = False
 top_cnx = 250
+
+# import os
+# os.environ["QT_API"] = "pyqt5"
 
 models = ["null","simple","cond"]
 vars = ["aics", "order", "probs", "threshed"]
@@ -88,7 +91,7 @@ brains = []
 this_rgba = np.zeros((len(labels), 4))
 inds = np.where(aic_comps["single_winner_ids"]==0)[0]
 if len(inds):
-    this_rgba[inds,] = np.array([1,0,0,1])
+    this_rgba[inds,] = np.array([1,0,0,])
     brains.append(plot_rgba(this_rgba, labels, parc, lup_title="Null superior"))
 
 this_rgba = np.zeros((len(labels), 4))
@@ -101,7 +104,8 @@ this_rgba = np.zeros((len(labels), 4))
 inds = np.where(aic_comps["single_winner_ids"]==2)[0]
 if len(inds):
     this_rgba[inds,] = np.array([0,0,1,1])
-    brains.append(plot_rgba(this_rgba, labels, parc, lup_title="Cond superior"))
+    brains.append(plot_rgba(this_rgba, labels, parc))
+    #brains.append(plot_rgba(this_rgba, labels, parc, lup_title="Cond superior"))
 
 this_rgba = np.zeros((len(labels), 4))
 inds = np.where(aic_comps["dual_winners"])[0]

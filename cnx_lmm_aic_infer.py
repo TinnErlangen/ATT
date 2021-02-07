@@ -3,6 +3,7 @@ import numpy as np
 from cnx_utils import plot_undirected_cnx, plot_directed_cnx, plot_rgba_cnx, load_sparse
 import mne
 import pickle
+import pandas as pd
 from collections import Counter
 from mayavi import mlab
 import matplotlib.pyplot as plt
@@ -19,8 +20,8 @@ Here we want to load up the results calculated in cnx_lmm_compare, infer
 significance with the AIC, and visualise results
 '''
 
-proc_dir = "/home/jeff/ATT_dat/lmm/"
-sps_dir = "/home/jeff/ATT_dat/proc/"
+proc_dir = "/home/jev/ATT_dat/lmm/"
+sps_dir = "/home/jev/ATT_dat/proc/"
 band = "alpha_1"
 node_n = 2415
 threshold = 0.001 # threshold for AIC comparison
@@ -30,12 +31,12 @@ labels = mne.read_labels_from_annot("fsaverage",parc)
 label_names = [label.name for label in labels]
 mat_n = len(labels)
 calc_aic = False
-top_cnx = 50
+top_cnx = 100
 bot_cnx = None
-no_Z = True
 write_images = True
 conds = ["rest","audio","visual","visselten","zaehlen"]
 z_name = ""
+no_Z = True
 if no_Z:
     z_name = "no_Z"
     conds = ["rest","audio","visual","visselten"]
@@ -56,13 +57,14 @@ models = ["null","simple","cond"]
 vars = ["aics", "order", "probs", "threshed"] # these will form the main keys of aic_comps dictionary below
 var_base = "C(Block, Treatment('rest'))" # stem of the condition names in statsmodels format
 
-stat_conds = [var_base+"[T."+cond+"]" for cond in conds[1:]] # convert simple cond names to statsmodels cond names
+stat_conds = ["Intercept"] + [var_base+"[T."+cond+"]" for cond in conds[1:]] # convert simple cond names to statsmodels cond names
 
 if calc_aic:
     aics = {mod:np.zeros(node_n) for mod in models}
     aics_pvals = {mod:[None for n in range(node_n)] for mod in models}
     aics_params = {mod:[None for n in range(node_n)] for mod in models}
     aics_confint = {mod:[None for n in range(node_n)] for mod in models}
+    aics_predicted = {mod:[None for n in range(node_n)] for mod in models}
     for mod in models:
         for n_idx in range(node_n):
             print(n_idx)
@@ -74,6 +76,13 @@ if calc_aic:
             aics_pvals[mod][n_idx] = this_mod.pvalues
             aics_params[mod][n_idx] = this_mod.params
             aics_confint[mod][n_idx] = this_mod.conf_int()
+            predicts = pd.Series({en:0 for en in this_mod.model.exog_names}, dtype=float)
+            for en_idx, en in enumerate(this_mod.model.exog_names):
+                vector = np.zeros(len(this_mod.model.exog_names))
+                vector[0] = 1
+                vector[en_idx] = 1
+                predicts[en] = this_mod.model.predict(this_mod.params, vector)
+            aics_predicted[mod][n_idx] = predicts
 
     aic_comps = {var:np.zeros((node_n,len(models))) for var in vars}
     aic_comps["models"] = models
@@ -83,8 +92,9 @@ if calc_aic:
     aic_comps["sig_params"] = np.zeros((node_n,len(stat_conds)))
     aic_comps["confint_params"] = np.zeros((node_n,len(stat_conds),2))
     aic_comps["dual_winner"] = np.zeros(node_n)
-    aic_comps["simple_sig_params"] = np.zeros(node_n)
-    aic_comps["simple_confint_params"] = np.zeros((node_n,2))
+    aic_comps["simple_sig_params"] = np.zeros((node_n, 2))
+    aic_comps["simple_confint_params"] = np.zeros((node_n,2,2))
+    aic_comps["predicted"] = aics_predicted
     for n_idx in range(node_n):
         for mod in models:
             if not aics[mod][n_idx]:
@@ -117,11 +127,12 @@ if calc_aic:
         if np.array_equal(aic_comps["threshed"][n_idx], np.array([0,1,1])): # simple and cond model significantly better than null model
             aic_comps["dual_winner"][n_idx] = 1 # mark 1 if all other models significantly different than best model
             if aics_pvals["simple"][n_idx]["C(Block, Treatment('rest'))[T.task]"] < cond_threshold:
-                aic_comps["simple_sig_params"][n_idx] = aics_params["simple"][n_idx]["C(Block, Treatment('rest'))[T.task]"]
+                aic_comps["simple_sig_params"][n_idx][1] = aics_params["simple"][n_idx]["C(Block, Treatment('rest'))[T.task]"]
+                aic_comps["simple_sig_params"][n_idx][0] = aics_params["simple"][n_idx]["Intercept"]
                 aic_comps["simple_confint_params"][n_idx] = (aics_confint["simple"][n_idx].loc["C(Block, Treatment('rest'))[T.task]"][0],
                                                              aics_confint["simple"][n_idx].loc["C(Block, Treatment('rest'))[T.task]"][1])
         else:
-            aic_comps["dual_winner"][n_idx] = None
+            aic_comps["dual_winner"][n_idx] = 0
 
     with open("{}{}/aic{}.pickle".format(proc_dir,band,z_name), "wb") as f:
         pickle.dump(aic_comps,f)
@@ -129,20 +140,27 @@ else:
     with open("{}{}/aic{}.pickle".format(proc_dir,band,z_name), "rb") as f:
         aic_comps = pickle.load(f)
 
-plt.hist(aic_comps["winner_ids"])
-plt.title("Winner IDs")
+# plt.hist(aic_comps["winner_ids"])
+# plt.title("Winner IDs")
 
 triu_inds = np.triu_indices(mat_n, k=1)
 cnx_masks = {mod:np.zeros((mat_n,mat_n)) for mod in models}
 cnx_params = {stat_cond:np.zeros((mat_n,mat_n)) for stat_cond in stat_conds}
-cnx_params["simple"] = np.zeros((mat_n,mat_n))
+cnx_params["simple_rest"] = np.zeros((mat_n,mat_n))
+cnx_params["simple_task"] = np.zeros((mat_n,mat_n))
 
 for n_idx in range(node_n):
     for stat_cond_idx,stat_cond in enumerate(stat_conds):
         if aic_comps["sig_params"][n_idx][stat_cond_idx]:
             cnx_params[stat_cond][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["sig_params"][n_idx][stat_cond_idx]
     if aic_comps["dual_winner"][n_idx]:
-        cnx_params["simple"][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["simple_sig_params"][n_idx]
+        cnx_params["simple_rest"][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["simple_sig_params"][n_idx][0]
+        cnx_params["simple_task"][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["simple_sig_params"][n_idx][1]
+
+# center intercepts around 0
+for cp in ["Intercept", "simple_rest"]:
+    inds = cnx_params[cp] != 0
+    cnx_params[cp][inds] -= 0.5
 
 if ROI:
     ROI_idx = label_names.index(ROI)
@@ -158,22 +176,25 @@ alpha_max, alpha_min = all_params[-1:], all_params[-top_cnx].min()
 alpha_max, alpha_min = 0.015, 0.001
 alpha_max, alpha_min = None, None
 params_brains = []
-for stat_cond,cond in zip(stat_conds,conds[1:]):
+for stat_cond,cond in zip(stat_conds,conds):
     params_brains.append(plot_directed_cnx(cnx_params[stat_cond],labels,parc,
                          alpha_min=alpha_min,alpha_max=alpha_max,
                          ldown_title=cond, top_cnx=top_cnx))
     if write_images:
         write_image(cond, views)
-params_brains.append(plot_directed_cnx(cnx_params["simple"],labels,parc,
+params_brains.append(plot_directed_cnx(cnx_params["simple_task"],labels,parc,
                      alpha_min=None,alpha_max=None,
-                     ldown_title="Simple", top_cnx=100))
+                     ldown_title="Simple (task)", top_cnx=top_cnx))
+params_brains.append(plot_directed_cnx(cnx_params["simple_rest"],labels,parc,
+                     alpha_min=None,alpha_max=None,
+                     ldown_title="Simple (rest)", top_cnx=top_cnx))
 if write_images:
     write_image("simple", views)
 
 #make 4D matrix with RGBA
 mat_rgba = np.zeros((mat_n, mat_n, 4))
 idx = 0
-for stat_cond in stat_conds:
+for stat_cond in stat_conds[1:]:
     if "zaehlen" in stat_cond:
         continue
     mat_rgba[...,idx] = abs(cnx_params[stat_cond])
@@ -186,7 +207,7 @@ for idx in range(3):
 #rgba_norm = (rgba_norm-rgba_norm[rgba_norm>0].min())/(rgba_norm.max()-rgba_norm[rgba_norm>0].min())
 mat_rgba[...,-1] = rgba_norm
 params_brains.append(plot_rgba_cnx(mat_rgba.copy(), labels, parc,
-                     ldown_title="Rainbow", top_cnx=None))
+                     ldown_title="Rainbow", top_cnx=top_cnx))
 
 if write_images:
     write_image("rainbow", views)

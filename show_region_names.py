@@ -3,12 +3,12 @@ import numpy as np
 from mayavi import mlab
 from surfer import Brain
 
-proc_dir = "/home/jeff/ATT_dat/proc/"
+proc_dir = "/home/jev/ATT_dat/proc/"
 conds = ["audio", "visual", "visselten"]
 parc = "RegionGrowing_70"
 freq = "alpha_1"
 cluster_idx = 0
-subjects_dir = "/home/jeff/freesurfer/subjects"
+subjects_dir = "/home/jev/freesurfer/subjects"
 
 # get constraint info
 net_names = ["rest-{}_{}_c{}".format(cond,freq,cluster_idx) for cond in conds]

@@ -40,9 +40,9 @@ band_info["gamma_2"] = {"freqs":list(np.arange(60,90)),"cycles":9}
 
 band = "alpha_1"
 freqs = band_info[band]["freqs"]
-subjects_dir = "/home/jeff/hdd/jeff/freesurfer/subjects/"
+subjects_dir = "/home/jev/hdd/jev/freesurfer/subjects/"
 proc_dir = "../proc/"
-lmm_dir = "/home/jeff/ATT_dat/lmm_dics/"
+lmm_dir = "/home/jev/ATT_dat/lmm_dics/"
 spacing = 4
 n_jobs = 4
 parc = "RegionGrowing_70"
@@ -55,7 +55,7 @@ for rn in region_names:
         if l.name == rn:
             regions.append(l)
 
-conds = ["rest", "audio", "visual", "visselten", "zaehlen"]
+conds = ["rest", "audio", "visual", "visselten"]
 conds = [cond+"|" for cond in conds]
 cond_str = "".join(conds)[:-1]
 
@@ -81,9 +81,8 @@ filelist = listdir(proc_dir+"/stcs/")
 group_id = []
 data = [[] for reg in regions]
 for filename in filelist:
-    rest_match = re.search("rest_{}-{}Hz_[0-9]*_ico4-lh.stc".format(freqs[0],freqs[-1]),filename)
-    other_match = re.search("({})_.*_{}-{}Hz_[0-9]*_ico4-lh.stc".format(cond_str,freqs[0],freqs[-1]),filename)
-    if not rest_match and not other_match:
+    match = re.search("({})_{}-{}Hz_[0-9]*_ico4-lh.stc".format(cond_str,freqs[0],freqs[-1]),filename)
+    if not match:
         continue
     print(filename)
     trial_info = re.match("nc_(ATT_[0-9]+)_({})".format(cond_str), filename).groups()
@@ -98,7 +97,7 @@ for filename in filelist:
     for reg_idx,reg in enumerate(regions):
         temp_data = mne.extract_label_time_course(stc,reg,fs_src,mode="mean")
         data[reg_idx].append(temp_data.mean())
-data = np.array(data) * 1e+26
+data = np.array(data)# * 1e+26
 
 for reg_idx in range(len(data)):
     dm_temp = dm.copy()

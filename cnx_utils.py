@@ -169,7 +169,7 @@ def cnx_cluster(f_vals, p_vals, cnx_n, p_thresh=0.05, edges=None):
 
 def plot_directed_cnx(mat,labels,parc,fig=None,lup_title=None,ldown_title=None,rup_title=None,
                       rdown_title=None,figsize=(3840,2160), lineres=1000,
-                      subjects_dir="/home/jeff/freesurfer/subjects",
+                      subjects_dir="/home/jev/hdd/freesurfer/subjects",
                       alpha_max=None, alpha_min=None, uniform_weight=False,
                       surface="inflated", alpha=1, top_cnx=50, bot_cnx=None,
                       centre=0, min_alpha=0.1):
@@ -274,7 +274,7 @@ def plot_directed_cnx(mat,labels,parc,fig=None,lup_title=None,ldown_title=None,r
 def plot_undirected_cnx(mat, labels, parc, fig=None, lup_title=None,
                         ldown_title=None, rup_title=None, rdown_title=None,
                         figsize=(3840,2160), lineres=1000,
-                        subjects_dir="/home/jeff/freesurfer/subjects",
+                        subjects_dir="/home/jev/hdd/freesurfer/subjects",
                         alpha_max=None, alpha_min=None, uniform_weight=False,
                         surface="inflated", alpha=1, top_cnx=50, bot_cnx=None,
                         color=(1,0,0)):
@@ -352,7 +352,7 @@ def plot_undirected_cnx(mat, labels, parc, fig=None, lup_title=None,
 def plot_rgba_cnx(mat_rgba, labels, parc, fig=None, lup_title=None,
                   ldown_title=None, rup_title=None, rdown_title=None,
                   figsize=(3840,2160), lineres=1000,
-                  subjects_dir="/home/jeff/freesurfer/subjects",
+                  subjects_dir="/home/jev/hdd/freesurfer/subjects",
                   uniform_weight=False, surface="inflated", brain_alpha=1,
                   top_cnx=50, bot_cnx=None):
 
@@ -417,8 +417,8 @@ def plot_rgba_cnx(mat_rgba, labels, parc, fig=None, lup_title=None,
 
 def plot_rgba(vec_rgba, labels, parc, fig=None, lup_title=None, ldown_title=None,
               rup_title=None, rdown_title=None, figsize=(3840,2160),
-              subjects_dir="/home/jeff/freesurfer/subjects",
-              uniform_weight=False, surface="inflated", brain_alpha=1):
+              subjects_dir="/home/jev/hdd/freesurfer/subjects",
+              uniform_weight=False, surface="inflated", brain_alpha=1.):
 
     if fig is None:
         fig = mlab.figure(size=figsize)
@@ -432,7 +432,8 @@ def plot_rgba(vec_rgba, labels, parc, fig=None, lup_title=None, ldown_title=None
         brain.add_text(0.7, 0.8, rup_title, "rup", font_size=40)
     if rdown_title:
         brain.add_text(0.7, 0., rdown_title, "rdown", font_size=40)
-    brain.add_annotation(parc,color="black")
+
+    brain.add_annotation(parc,color="black", alpha=1.)
 
     for l_idx, l in enumerate(labels):
         if np.array_equal(vec_rgba[l_idx], [0,0,0,0]):
