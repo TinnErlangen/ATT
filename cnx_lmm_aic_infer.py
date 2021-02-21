@@ -10,10 +10,10 @@ import matplotlib.pyplot as plt
 plt.ion()
 
 
-def write_image(name, views):
+def write_image(name, views, brain, dir=None):
     for k,v in views.items():
-        mlab.view(*v)
-        mlab.savefig("{}_{}.png".format(name,k))
+        brain.show_view(**v)
+        brain.save_image("{}{}_{}.png".format(dir, name, k))
 
 '''
 Here we want to load up the results calculated in cnx_lmm_compare, infer
@@ -48,9 +48,9 @@ ROI = "L3395-lh"  # M1 superior
 # ROI = "L7491_L4557-lh"  # left sup-parietal anterior
 ROI = None
 
-views = {"left":(174.04705636967836, 88.55890357825739, 941.4741554564995, [50.94759019, -8.48534077,  1.71607074]),
-         "right":(-0.6174341041313067, 88.85279275719549, 941.4741554565016, [50.94759019, -8.48534077,  1.71607074]),
-         "upper":(-92.63891483324943, 31.307442385470907, 1139.1837281022597, [-7.28569954, -25.69044091, -13.22133731])
+views = {"left":{"view":"medial","distance":1000,"hemi":"rh"},
+         "right":{"view":"medial","distance":1000,"hemi":"lh"},
+         "upper":{"view":"dorsal","distance":1000}
 }
 
 models = ["null","simple","cond"]
@@ -181,17 +181,22 @@ for stat_cond,cond in zip(stat_conds,conds):
                          alpha_min=alpha_min,alpha_max=alpha_max,
                          ldown_title=cond, top_cnx=top_cnx))
     if write_images:
-        write_image(cond, views)
+        write_image(cond, views, params_brains[-1], "../images/")
+
 params_brains.append(plot_directed_cnx(cnx_params["simple_task"],labels,parc,
                      alpha_min=None,alpha_max=None,
                      ldown_title="Simple (task)", top_cnx=top_cnx))
+if write_images:
+    write_image("simple_task", views, params_brains[-1], "../images/")
+
 params_brains.append(plot_directed_cnx(cnx_params["simple_rest"],labels,parc,
                      alpha_min=None,alpha_max=None,
                      ldown_title="Simple (rest)", top_cnx=top_cnx))
 if write_images:
-    write_image("simple", views)
+    if write_images:
+        write_image("simple_rest", views, params_brains[-1], "../images/")
 
-#make 4D matrix with RGBA
+# make 4D matrix with RGBA
 mat_rgba = np.zeros((mat_n, mat_n, 4))
 idx = 0
 for stat_cond in stat_conds[1:]:
@@ -210,4 +215,5 @@ params_brains.append(plot_rgba_cnx(mat_rgba.copy(), labels, parc,
                      ldown_title="Rainbow", top_cnx=top_cnx))
 
 if write_images:
-    write_image("rainbow", views)
+    write_image("rainbow", views, params_brains[-1]._renderer.plotter,
+                "../images/")

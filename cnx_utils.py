@@ -4,8 +4,13 @@ from scipy.linalg import sqrtm
 import pickle
 from collections import defaultdict
 import bezier
-from surfer import Brain
+#from surfer import Brain
+from mne.viz import Brain
 from mayavi import mlab
+import pyvista as pv
+from matplotlib.pyplot import cm
+import mne
+mne.viz.set_3d_backend("pyvista")
 
 class TriuSparse():
     def __init__(self,mat,k=1,precision=np.float32):
@@ -167,12 +172,15 @@ def cnx_cluster(f_vals, p_vals, cnx_n, p_thresh=0.05, edges=None):
         out_edges.append([edges[aei] for aei in act_ed_inds])
     return comp_f, out_edges
 
-def plot_directed_cnx(mat,labels,parc,fig=None,lup_title=None,ldown_title=None,rup_title=None,
-                      rdown_title=None,figsize=(3840,2160), lineres=1000,
+def plot_directed_cnx(mat,labels,parc,lup_title=None,ldown_title=None,rup_title=None,
+                      rdown_title=None, figsize=(3840,2160), lineres=100,
                       subjects_dir="/home/jev/hdd/freesurfer/subjects",
                       alpha_max=None, alpha_min=None, uniform_weight=False,
                       surface="inflated", alpha=1, top_cnx=50, bot_cnx=None,
-                      centre=0, min_alpha=0.1):
+                      centre=0, min_alpha=0.1, cmap_name="RdBu"):
+
+    cmap = cm.get_cmap(cmap_name)
+
     if mat.min() >= centre or mat.max() < centre:
         print("Warning: Values do not seem to match specified centre of {}.".format(centre))
     mat -= centre
@@ -191,11 +199,11 @@ def plot_directed_cnx(mat,labels,parc,fig=None,lup_title=None,ldown_title=None,r
         except:
             thresh = matflat[matflat>0].max()
         mat[np.abs(mat)>thresh] = 0
+
     lingrad = np.linspace(0,1,lineres)
-    if fig is None:
-        fig = mlab.figure(size=figsize)
+
     brain = Brain('fsaverage', 'both', surface, alpha=alpha,
-                  subjects_dir=subjects_dir, figure=fig)
+                  subjects_dir=subjects_dir, size=figsize, show=False)
     if lup_title:
         brain.add_text(0, 0.8, lup_title, "lup", font_size=40)
     if ldown_title:
@@ -245,15 +253,20 @@ def plot_directed_cnx(mat,labels,parc,fig=None,lup_title=None,ldown_title=None,r
         alphas = (1-min_alpha)*((np.abs(mat[inds[0],inds[1]])-alpha_min)/(alpha_max-alpha_min)) + min_alpha
         alphas[alphas<0],alphas[alphas>1] = 0, 1
 
-    mlab.points3d(origins[:,0],origins[:,1],origins[:,2],
-                  alphas,scale_factor=10,color=(1,0,0),transparent=True)
-    mlab.points3d(dests[:,0],dests[:,1],dests[:,2],
-                  alphas,scale_factor=10,color=(0,0,1),transparent=True)
+    # mlab.points3d(origins[:,0],origins[:,1],origins[:,2],
+    #               alphas,scale_factor=10,color=(1,0,0),transparent=True)
+    # mlab.points3d(dests[:,0],dests[:,1],dests[:,2],
+    #               alphas,scale_factor=10,color=(0,0,1),transparent=True)
     for l_idx, l in enumerate(labels):
         if area_weight[l_idx] == 0:
             continue
         brain.add_label(l,color=(area_red[l_idx],0,area_blue[l_idx]),
                         alpha=area_weight[l_idx])
+        point = pv.Sphere(center=rrs[l_idx], radius=area_weight[l_idx]*5+2)
+        brain._renderer.plotter.add_mesh(point,
+                                         color=(area_red[l_idx],0,
+                                         area_blue[l_idx]),
+                                         opacity=area_weight[l_idx])
         # mlab.points3d(rrs[l_idx,0],rrs[l_idx,1],rrs[l_idx,2],
         #               area_weight[l_idx],scale_factor=10,
         #               color=(area_red[l_idx],0,area_blue[l_idx]),
@@ -265,10 +278,17 @@ def plot_directed_cnx(mat,labels,parc,fig=None,lup_title=None,ldown_title=None,r
                                       [origins[idx,2],spline_mids[idx,2],dests[idx,2]]]),
                                       degree=2)
         spl_pts[idx,] = curve.evaluate_multi(lingrad)
-        mlab.plot3d(spl_pts[idx,0,],spl_pts[idx,1,],spl_pts[idx,2,],
-                    lingrad*255,tube_radius=alphas[idx]*2,colormap="RdBu",
-                    opacity=alphas[idx])
+        spline = pv.Spline(spl_pts[idx,].T, lineres)
+        tube = spline.tube(radius=alphas[idx])
+        tube["scalars"] = np.linspace(0,1,tube.n_points)
+        brain._renderer.plotter.add_mesh(tube, cmap=cmap,
+                                         opacity=alphas[idx])
+        # mlab.plot3d(spl_pts[idx,0,],spl_pts[idx,1,],spl_pts[idx,2,],
+        #             lingrad*255,tube_radius=alphas[idx]*2,colormap="RdBu",
+        #             opacity=alphas[idx])
 
+    brain._renderer.plotter.remove_scalar_bar()
+    brain.show()
     return brain
 
 def plot_undirected_cnx(mat, labels, parc, fig=None, lup_title=None,
@@ -349,29 +369,39 @@ def plot_undirected_cnx(mat, labels, parc, fig=None, lup_title=None,
 
     return brain
 
-def plot_rgba_cnx(mat_rgba, labels, parc, fig=None, lup_title=None,
+def plot_rgba_cnx(mat_rgba, labels, parc, lup_title=None,
                   ldown_title=None, rup_title=None, rdown_title=None,
-                  figsize=(3840,2160), lineres=1000,
+                  figsize=(3840,2160), lineres=100,
                   subjects_dir="/home/jev/hdd/freesurfer/subjects",
                   uniform_weight=False, surface="inflated", brain_alpha=1,
                   top_cnx=50, bot_cnx=None):
 
-    matflat = mat_rgba[...,-1].flatten()
     if top_cnx is not None:
-        thresh = np.sort(matflat[matflat>0])[-top_cnx]
-        mat_rgba[mat_rgba[...,-1]<thresh,:] = 0
+        matflat = np.abs(mat_rgba.flatten())
+        try:
+            thresh = np.sort(matflat[matflat>0])[-top_cnx]
+        except:
+            thresh = matflat[matflat>0].min()
+        mat_rgba[np.abs(mat_rgba)<thresh] = 0
     if bot_cnx is not None:
-        thresh = np.sort(matflat[matflat>0])[-bot_cnx]
+        matflat = np.abs(mat.flatten())
+        try:
+            thresh = np.sort(matflat[matflat>0])[-bot_cnx]
+        except:
+            thresh = matflat[matflat>0].max()
         mat_rgba[np.abs(mat_rgba)>thresh] = 0
+
     alpha = mat_rgba[...,-1].copy()
-    alpha[alpha>0] = (alpha[alpha>0] - alpha[alpha>0].min()) / (alpha.max() - alpha[alpha>0].min())
+    alpha_inds = alpha>0
+    alpha[alpha_inds] = (alpha[alpha_inds] - alpha[alpha_inds].min()) / \
+      (alpha.max() - alpha[alpha_inds].min())
+    # put a floor on smallest value
+    alpha[alpha_inds] = alpha[alpha_inds] * .9 + 0.1
     mat_rgba[...,-1] = alpha
 
     lingrad = np.linspace(0,1,lineres)
-    if fig is None:
-        fig = mlab.figure(size=figsize)
     brain = Brain('fsaverage', 'both', surface, alpha=brain_alpha,
-                  subjects_dir=subjects_dir, figure=fig)
+                  subjects_dir=subjects_dir, size=figsize, show=False)
     if lup_title:
         brain.add_text(0, 0.8, lup_title, "lup", font_size=40)
     if ldown_title:
@@ -404,26 +434,54 @@ def plot_rgba_cnx(mat_rgba, labels, parc, fig=None, lup_title=None,
                                        [origins[idx,2],spline_mids[idx,2],dests[idx,2]]]),
                                        degree=2)
         spl_pts[idx,] = curve.evaluate_multi(lingrad)
-        mlab.plot3d(spl_pts[idx,0,], spl_pts[idx,1,], spl_pts[idx,2,],
-                    lingrad*255, tube_radius=alpha*2, color=color,
-                    opacity=alpha)
-        # origin points
-        mlab.points3d(origins[idx,0],origins[idx,1],origins[idx,2],
-                      alpha,scale_factor=10,color=color,transparent=True)
-        mlab.points3d(dests[idx,0],dests[idx,1],dests[idx,2],
-                      alpha,scale_factor=10,color=color,transparent=True)
 
+        spline = pv.Spline(spl_pts[idx,].T, lineres)
+        tube = spline.tube(radius=alpha*2)
+        brain._renderer.plotter.add_mesh(tube, color=color, opacity=alpha)
+        # mlab.plot3d(spl_pts[idx,0,], spl_pts[idx,1,], spl_pts[idx,2,],
+        #             lingrad*255, tube_radius=alpha*2, color=color,
+        #             opacity=alpha)
+
+    ## origin/destination points and label colouring
+    # first get row/column alpha maxima, calculate range for normalisation
+    alpha_max = np.stack((mat_rgba[...,3].max(axis=0),
+                           mat_rgba[...,3].max(axis=1))).max(axis=0)
+    alpha_max_max, alpha_max_min = (alpha_max.max(),
+                                    alpha_max[alpha_max!=0].min())
+    # normalise
+    alpha_inds = alpha_max!=0
+    alpha_max[alpha_inds] = ((alpha_max[alpha_inds] -
+                              alpha_max[alpha_inds].min()) /
+                             (alpha_max.max() - alpha_max[alpha_inds].min()))
+    # put a floor on smallest value
+    alpha_max[alpha_inds] = alpha_max[alpha_inds] * .7 + 0.3
+    # go through each region and colour it
+    for idx in range(len(labels)):
+        if not (np.any(mat_rgba[idx,]) or np.any(mat_rgba[:,idx,])):
+            continue
+        color_vec = np.dot(mat_rgba[idx,:,:3].T, mat_rgba[idx,:,3]) + \
+          np.dot(mat_rgba[:,idx,:3].T, mat_rgba[:,idx,3])
+        color_vec = color_vec / np.linalg.norm(color_vec)
+        alpha = alpha_max[idx]
+        brain.add_label(labels[idx], color=color_vec, alpha=alpha)
+        point = pv.Sphere(center=rrs[idx], radius=alpha*5+0.2)
+        brain._renderer.plotter.add_mesh(point, color=color_vec, opacity=1)
+
+        # mlab.points3d(origins[idx,0],origins[idx,1],origins[idx,2],
+        #               alpha,scale_factor=10,color=color,transparent=True)
+        # mlab.points3d(dests[idx,0],dests[idx,1],dests[idx,2],
+        #               alpha,scale_factor=10,color=color,transparent=True)
+
+    brain.show()
     return brain
 
-def plot_rgba(vec_rgba, labels, parc, fig=None, lup_title=None, ldown_title=None,
+def plot_rgba(vec_rgba, labels, parc, lup_title=None, ldown_title=None,
               rup_title=None, rdown_title=None, figsize=(3840,2160),
               subjects_dir="/home/jev/hdd/freesurfer/subjects",
               uniform_weight=False, surface="inflated", brain_alpha=1.):
 
-    if fig is None:
-        fig = mlab.figure(size=figsize)
     brain = Brain('fsaverage', 'both', surface, alpha=brain_alpha,
-                   subjects_dir=subjects_dir, figure=fig)
+                   subjects_dir=subjects_dir, size=figsize, show=False)
     if lup_title:
         brain.add_text(0, 0.8, lup_title, "lup", font_size=40)
     if ldown_title:
@@ -440,6 +498,7 @@ def plot_rgba(vec_rgba, labels, parc, fig=None, lup_title=None, ldown_title=None
             continue
         brain.add_label(l, color=vec_rgba[l_idx,:3], alpha=vec_rgba[l_idx,3])
 
+    brain.show()
     return brain
 
 """ calculate the corelation distance of dPTE connectivity matrices """
