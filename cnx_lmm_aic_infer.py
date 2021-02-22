@@ -11,9 +11,24 @@ plt.ion()
 
 
 def write_image(name, views, brain, dir=None):
+    img_list = []
     for k,v in views.items():
         brain.show_view(**v)
-        brain.save_image("{}{}_{}.png".format(dir, name, k))
+        scr = brain.screenshot()
+        img_list.append(scr)
+
+    img = np.zeros((2160*2,2160*2,3),dtype=int)
+    img[:2160,:2160,] = img_list[0]
+    img[:2160,2160:,] = img_list[1]
+    img[2160:,2160//2:2160//2+2160,] = img_list[2]
+
+    plt.figure(figsize=(38.4,21.6))
+    plt.imshow(img)
+    plt.tight_layout()
+    plt.axis("off")
+    plt.savefig("{}{}.png".format(dir, name))
+    plt.close("all")
+
 
 '''
 Here we want to load up the results calculated in cnx_lmm_compare, infer
@@ -48,9 +63,9 @@ ROI = "L3395-lh"  # M1 superior
 # ROI = "L7491_L4557-lh"  # left sup-parietal anterior
 ROI = None
 
-views = {"left":{"view":"medial","distance":1000,"hemi":"rh"},
-         "right":{"view":"medial","distance":1000,"hemi":"lh"},
-         "upper":{"view":"dorsal","distance":1000}
+views = {"left":{"view":"lateral","distance":800,"hemi":"lh"},
+         "right":{"view":"lateral","distance":800,"hemi":"rh"},
+         "upper":{"view":"dorsal","distance":900}
 }
 
 models = ["null","simple","cond"]
@@ -215,5 +230,5 @@ params_brains.append(plot_rgba_cnx(mat_rgba.copy(), labels, parc,
                      ldown_title="Rainbow", top_cnx=top_cnx))
 
 if write_images:
-    write_image("rainbow", views, params_brains[-1]._renderer.plotter,
+    write_image("rainbow", views, params_brains[-1],
                 "../images/")

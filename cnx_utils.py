@@ -173,7 +173,7 @@ def cnx_cluster(f_vals, p_vals, cnx_n, p_thresh=0.05, edges=None):
     return comp_f, out_edges
 
 def plot_directed_cnx(mat,labels,parc,lup_title=None,ldown_title=None,rup_title=None,
-                      rdown_title=None, figsize=(3840,2160), lineres=100,
+                      rdown_title=None, figsize=2160, lineres=100,
                       subjects_dir="/home/jev/hdd/freesurfer/subjects",
                       alpha_max=None, alpha_min=None, uniform_weight=False,
                       surface="inflated", alpha=1, top_cnx=50, bot_cnx=None,
@@ -371,7 +371,7 @@ def plot_undirected_cnx(mat, labels, parc, fig=None, lup_title=None,
 
 def plot_rgba_cnx(mat_rgba, labels, parc, lup_title=None,
                   ldown_title=None, rup_title=None, rdown_title=None,
-                  figsize=(3840,2160), lineres=100,
+                  figsize=2160, lineres=100,
                   subjects_dir="/home/jev/hdd/freesurfer/subjects",
                   uniform_weight=False, surface="inflated", brain_alpha=1,
                   top_cnx=50, bot_cnx=None):
@@ -475,12 +475,12 @@ def plot_rgba_cnx(mat_rgba, labels, parc, lup_title=None,
     brain.show()
     return brain
 
-def plot_rgba(vec_rgba, labels, parc, lup_title=None, ldown_title=None,
-              rup_title=None, rdown_title=None, figsize=(3840,2160),
-              subjects_dir="/home/jev/hdd/freesurfer/subjects",
+def plot_rgba(vec_rgba, labels, parc, hemi="both", lup_title=None,
+              ldown_title=None, rup_title=None, rdown_title=None,
+              figsize=2160, subjects_dir="/home/jev/hdd/freesurfer/subjects",
               uniform_weight=False, surface="inflated", brain_alpha=1.):
 
-    brain = Brain('fsaverage', 'both', surface, alpha=brain_alpha,
+    brain = Brain('fsaverage', hemi, surface, alpha=brain_alpha,
                    subjects_dir=subjects_dir, size=figsize, show=False)
     if lup_title:
         brain.add_text(0, 0.8, lup_title, "lup", font_size=40)
