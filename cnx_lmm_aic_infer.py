@@ -110,6 +110,9 @@ if calc_aic:
     aic_comps["simple_sig_params"] = np.zeros((node_n, 2))
     aic_comps["simple_confint_params"] = np.zeros((node_n,2,2))
     aic_comps["predicted"] = aics_predicted
+    aic_comps["stat_conds"] = stat_conds
+    aic_comps["conds"] = conds
+    aic_comps["cond_dict"] = {k:v for k,v in zip(conds, stat_conds)}
     for n_idx in range(node_n):
         for mod in models:
             if not aics[mod][n_idx]:
