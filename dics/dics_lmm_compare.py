@@ -40,7 +40,7 @@ band_info["gamma_2"] = {"freqs":list(np.arange(60,90)),"cycles":9}
 
 band = "alpha_1"
 freqs = band_info[band]["freqs"]
-subjects_dir = "/home/jev/hdd/jev/freesurfer/subjects/"
+subjects_dir = "/home/jev/hdd/freesurfer/subjects/"
 proc_dir = "../proc/"
 lmm_dir = "/home/jev/ATT_dat/lmm_dics/"
 spacing = 4

@@ -8,12 +8,10 @@ doTones = False
 proc_dir = "../proc/"
 subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
-         "ATT_24", "ATT_25", "ATT_26", "ATT_28", "ATT_29", "ATT_31", "ATT_33",
+         "ATT_24", "ATT_25", "ATT_26", "ATT_28", "ATT_31", "ATT_33",
          "ATT_34", "ATT_35", "ATT_36", "ATT_37"]
-subjs = ["ATT_14", "ATT_15", "ATT_16",
-         "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
-         "ATT_24", "ATT_25", "ATT_26", "ATT_28", "ATT_29", "ATT_31", "ATT_33",
-         "ATT_34", "ATT_35", "ATT_36", "ATT_37"]
+subjs = ["ATT_31", "ATT_33", "ATT_34", "ATT_35", "ATT_36", "ATT_37"]
+
 # ATT_30/KER27, ATT_27, ATT_32/EAM67   excluded for too much head movement between blocks
 
 
@@ -84,25 +82,44 @@ for k,v in band_info.items():
 
         print("\n\n")
         print("\n\n")
-        if not doTones:
-            epos = epo_conds
-            epo_names = epo_cond_names
-        for epo,epo_name in zip(epos,epo_names):
-            epo_csd = csd_morlet(epo, frequencies=freqs,
-                                   n_jobs=n_jobs, n_cycles=c, decim=3)
-            #epo_csd = epo_csd.mean()
-            stc, freqs = apply_dics_csd(epo_csd,filters)
-            stc.expand([s["vertno"] for s in src])
-            stc.subject = sub
-            stc.save("{a}stcs/nc_{b}_{c}_{f0}-{f1}Hz_{sp}".format(
-                            a=proc_dir, b=sub, c=epo_name, f0=f[0], f1=f[-1], sp=spacing))
+        # if not doTones:
+        #     epos = epo_conds
+        #     epo_names = epo_cond_names
+        # for epo,epo_name in zip(epos,epo_names):
+        #     epo_csd = csd_morlet(epo, frequencies=freqs,
+        #                          n_jobs=n_jobs, n_cycles=c, decim=3)
+        #     #epo_csd = epo_csd.mean()
+        #     stc, freqs = apply_dics_csd(epo_csd,filters)
+        #     stc.expand([s["vertno"] for s in src])
+        #     stc.subject = sub
+        #     stc.save("{a}stcs/nc_{b}_{c}_{f0}-{f1}Hz_{sp}".format(
+        #                     a=proc_dir, b=sub, c=epo_name, f0=f[0],
+        #                     f1=f[-1], sp=spacing))
+        #     for event in range(len(epo)):
+        #         print(event)
+        #         event_csd = csd_morlet(epo[event], frequencies=freqs,
+        #                                n_jobs=n_jobs, n_cycles=7, decim=3)
+        #         stc, freqs = apply_dics_csd(event_csd, filters)
+        #         del event_csd
+        #         stc.expand([s["vertno"] for s in src])
+        #         stc.subject = sub
+        #         stc.save("{a}stcs/nc_{b}_{c}_{f0}-{f1}Hz_{d}_{sp}".format(
+        #                   a=proc_dir, b=sub, c=epo_name, f0=f[0], f1=f[-1],
+        #                   d=event, sp=spacing))
+        
+        # now byresp epo
+        for run in ["audio","visual","visselten"]:
+            epo_name = "{dir}{sub}_{run}_byresp-epo.fif".format(
+                        dir=proc_dir, sub=sub, run=run)
+            epo = mne.read_epochs(epo_name)
             for event in range(len(epo)):
                 print(event)
                 event_csd = csd_morlet(epo[event], frequencies=freqs,
                                        n_jobs=n_jobs, n_cycles=7, decim=3)
-                stc, freqs = apply_dics_csd(event_csd,filters)
+                stc, freqs = apply_dics_csd(event_csd, filters)
                 del event_csd
                 stc.expand([s["vertno"] for s in src])
                 stc.subject = sub
-                stc.save("{a}stcs/nc_{b}_{c}_{f0}-{f1}Hz_{d}_{sp}".format(
-                                a=proc_dir, b=sub, c=epo_name, f0=f[0], f1=f[-1], d=event, sp=spacing))
+                stc.save("{a}stcs/nc_{b}_{c}_byresp_{f0}-{f1}Hz_{d}_{sp}".format(
+                          a=proc_dir, b=sub, c=run, f0=f[0], f1=f[-1],
+                          d=event, sp=spacing))

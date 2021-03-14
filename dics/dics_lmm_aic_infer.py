@@ -1,6 +1,6 @@
 from statsmodels.regression.mixed_linear_model import MixedLMResults
 import numpy as np
-from cnx_utils import plot_rgba
+from cnx_utils import plot_rgba, write_brain_image
 import mne
 import pickle
 import matplotlib.pyplot as plt
@@ -19,6 +19,11 @@ top_cnx = 250
 
 # import os
 # os.environ["QT_API"] = "pyqt5"
+
+views = {"left":{"view":"lateral","distance":800,"hemi":"lh"},
+         "right":{"view":"lateral","distance":800,"hemi":"rh"},
+         "upper":{"view":"dorsal","distance":900}
+}
 
 models = ["null","simple","cond"]
 vars = ["aics", "order", "probs", "threshed"]
@@ -88,36 +93,84 @@ else:
 
 brains = []
 
-this_rgba = np.zeros((len(labels), 4))
-inds = np.where(aic_comps["single_winner_ids"]==0)[0]
-if len(inds):
-    this_rgba[inds,] = np.array([1,0,0,])
-    brains.append(plot_rgba(this_rgba, labels, parc, lup_title="Null superior"))
+# this_rgba = np.zeros((len(labels), 4))
+# inds = np.where(aic_comps["single_winner_ids"]==0)[0]
+# if len(inds):
+#     this_rgba[inds,] = np.array([1,0,0,])
+#     brains.append(plot_rgba(this_rgba, labels, parc, lup_title="Null superior"))
+#
+# this_rgba = np.zeros((len(labels), 4))
+# inds = np.where(aic_comps["single_winner_ids"]==1)[0]
+# if len(inds):
+#     this_rgba[inds,] = np.array([0,1,0,1])
+#     brains.append(plot_rgba(this_rgba, labels, parc, lup_title="Simple superior"))
+#
+# this_rgba = np.zeros((len(labels), 4))
+# inds = np.where(aic_comps["single_winner_ids"]==2)[0]
+# if len(inds):
+#     this_rgba[inds,] = np.array([0,0,1,1])
+#     #brains.append(plot_rgba(this_rgba, labels, parc))
+#     brains.append(plot_rgba(this_rgba, labels, parc, lup_title="Cond superior"))
+#
+# this_rgba = np.zeros((len(labels), 4))
+# inds = np.where(aic_comps["dual_winners"])[0]
+# if len(inds):
+#     this_rgba[inds,] = np.array([1,1,0,1])
+#     brains.append(plot_rgba(this_rgba, labels, parc, lup_title="Only Null rejected"))
 
+vecs = aic_comps["simp_params"].copy()
+vecs_abs = abs(vecs)
+va_min, va_max, = vecs_abs[vecs_abs!=0].min(), vecs_abs.max()
+vec_norm = ((vecs_abs - va_min) / (va_max - va_min)) * np.sign(vecs)
 this_rgba = np.zeros((len(labels), 4))
-inds = np.where(aic_comps["single_winner_ids"]==1)[0]
-if len(inds):
-    this_rgba[inds,] = np.array([0,1,0,1])
-    brains.append(plot_rgba(this_rgba, labels, parc, lup_title="Simple superior"))
+this_rgba[vec_norm>0,0] = 1
+this_rgba[vec_norm<0,2] = 1
+this_rgba[vec_norm!=0,3] = np.abs(vec_norm[vec_norm!=0])
+brains.append(plot_rgba(this_rgba, labels, parc, lup_title="Task power change"))
+write_brain_image("task_power", views, brains[-1], dir="../images/")
 
-this_rgba = np.zeros((len(labels), 4))
+# changes from rest for each individual task
+vecs = aic_comps["sig_params"].copy()
+vecs_abs = abs(vecs)
+va_min, va_max, = vecs_abs[vecs_abs!=0].min(), vecs_abs.max()
+vec_norms = ((vecs_abs - va_min) / (va_max - va_min)) * np.sign(vecs)
+
 inds = np.where(aic_comps["single_winner_ids"]==2)[0]
-if len(inds):
-    this_rgba[inds,] = np.array([0,0,1,1])
-    brains.append(plot_rgba(this_rgba, labels, parc))
-    #brains.append(plot_rgba(this_rgba, labels, parc, lup_title="Cond superior"))
 
+# audio
 this_rgba = np.zeros((len(labels), 4))
-inds = np.where(aic_comps["dual_winners"])[0]
-if len(inds):
-    this_rgba[inds,] = np.array([1,1,0,1])
-    brains.append(plot_rgba(this_rgba, labels, parc, lup_title="Null rejected"))
+vec_norm = vec_norms[:,0]
+this_rgba[vec_norm>0,0] = 1
+this_rgba[vec_norm<0,2] = 1
+this_rgba[vec_norm!=0,3] = np.abs(vec_norm[vec_norm!=0])
+brains.append(plot_rgba(this_rgba, labels, parc, lup_title="Audio power change"))
+write_brain_image("audio_power", views, brains[-1], dir="../images/")
+# visual
+this_rgba = np.zeros((len(labels), 4))
+vec_norm = vec_norms[:,1]
+this_rgba[vec_norm>0,0] = 1
+this_rgba[vec_norm<0,2] = 1
+this_rgba[vec_norm!=0,3] = np.abs(vec_norm[vec_norm!=0])
+brains.append(plot_rgba(this_rgba, labels, parc, lup_title="Visual power change"))
+write_brain_image("visual_power", views, brains[-1], dir="../images/")
 
+# visselten
 this_rgba = np.zeros((len(labels), 4))
-vec = aic_comps["simp_params"]
-vec = (vec - np.abs(vec).min() * np.sign(vec)) / (np.abs(vec).max() - np.abs(vec).min())
-if len(inds):
-    this_rgba[vec>0,0] = vec[vec>0]
-    this_rgba[vec<0,2] = np.abs(vec[vec<0])
-    this_rgba[vec!=0,3] = 1
-    brains.append(plot_rgba(this_rgba, labels, parc, lup_title="Task change"))
+vec_norm = vec_norms[:,2]
+this_rgba[vec_norm>0,0] = 1
+this_rgba[vec_norm<0,2] = 1
+this_rgba[vec_norm!=0,3] = np.abs(vec_norm[vec_norm!=0])
+brains.append(plot_rgba(this_rgba, labels, parc, lup_title="Visselten power change"))
+write_brain_image("visselten_power", views, brains[-1], dir="../images/")
+
+# rainbow
+this_rgba = np.zeros((len(labels), 4))
+this_rgba[:,:3] = vec_norms
+vec_norms = np.linalg.norm(vecs, axis=1)
+vec_norms = (vec_norms - vec_norms[vec_norms!=0].min()) / \
+            (vec_norms.max() - vec_norms[vec_norms!=0].min())
+this_rgba[:,3] = vec_norms
+brains.append(plot_rgba(abs(this_rgba), labels, parc, lup_title="Rainbow"))
+brains[-1]._renderer.plotter.add_legend([["Audio","r"],["Visual","g"],
+                                         ["Visselten","b"]], bcolor=(0,0,0))
+write_brain_image("rainbow_power", views, brains[-1], dir="../images/")

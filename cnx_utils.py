@@ -4,6 +4,7 @@ from scipy.linalg import sqrtm
 import pickle
 from collections import defaultdict
 import bezier
+import matplotlib.pyplot as plt
 #from surfer import Brain
 from mne.viz import Brain
 from mayavi import mlab
@@ -514,3 +515,22 @@ def pw_cor_dist(mat,inds):
         dist = (dist * -1 + 1)/2 # transform to distance measure
         dists[pair_idx] = dist
     return dists
+
+def write_brain_image(name, views, brain, dir=None):
+    img_list = []
+    for k,v in views.items():
+        brain.show_view(**v)
+        scr = brain.screenshot()
+        img_list.append(scr)
+
+    img = np.zeros((2160*2,2160*2,3),dtype=int)
+    img[:2160,:2160,] = img_list[0]
+    img[:2160,2160:,] = img_list[1]
+    img[2160:,2160//2:2160//2+2160,] = img_list[2]
+
+    plt.figure(figsize=(38.4,21.6))
+    plt.imshow(img)
+    plt.tight_layout()
+    plt.axis("off")
+    plt.savefig("{}{}.png".format(dir, name))
+    plt.close("all")

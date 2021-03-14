@@ -11,6 +11,30 @@ import matplotlib.pyplot as plt
 plt.ion()
 from cnx_utils import plot_rgba
 
+def brain_pane(parc, reg_colors, labels, COIs, COI_col):
+    top_bot = []
+    label_names = [l.name for l in labels]
+    for hemi in ["lh", "rh"]:
+        labels_to_plot = [l for r in reg_colors.keys() for l in labels
+                          if r==l.name[:-3] and hemi in l.name]
+        colors = np.stack(list(reg_colors.values()))
+        brain = plot_rgba(colors, labels_to_plot, parc,
+                          figsize=(1920,1080), hemi=hemi)
+        for coi in COIs:
+            if hemi not in coi:
+                continue
+            lab = labels[label_names.index(coi)]
+            brain.add_label(lab, color=COI_col, borders=True, hemi=hemi)
+        brain.show_view(**{"view":"lateral","distance":300,"hemi":hemi})
+        img_lat = brain.screenshot()
+        brain.show_view(**{"view":"dorsal","distance":400,"hemi":hemi})
+        img_dor = brain.screenshot()
+        brain.close()
+        img = np.hstack((img_lat,img_dor[:,640:1280,]))
+        top_bot.append(img)
+    final_img = np.vstack(top_bot)
+    return final_img
+
 proc_dir = "/home/jev/ATT_dat/lmm/"
 band = "alpha_1"
 parc = "RegionGrowing_70"
@@ -29,11 +53,11 @@ label_ypos = {k:v for k,v in sorted(label_ypos.items(), key=lambda item: item[1]
 label_hemi = {hemi:{k:v for k,v in label_ypos.items() if v[-1] == hemi} for hemi in ["lh", "rh"]}
 
 cond_keys = {"Intercept":"Resting","C(Block, Treatment('rest'))[T.task]":"Task",
-             "params":"Sig. change"}
+             "params":"Difference"}
 
-COI_cols = {'left motor': 'white', 'right motor': 'white',
-            'left par-occipital': 'white', 'right par-occipital': 'white',
-            'left parietal': 'white', 'right parietal': 'white'}
+COI_cols = {'left motor': 'red', 'right motor': 'red',
+            'left par-occipital': 'red', 'right par-occipital': 'red',
+            'left parietal': 'red', 'right parietal': 'red'}
 
 
 conds = ["rest","audio","visual","visselten","zaehlen"]
@@ -84,7 +108,7 @@ for COI_k, COI_v in COIs.items():
             cnx_row = cnx_preds[cond][row_inds,].mean(axis=0, keepdims=True)
             col_order = np.array([v[1] for v in label_hemi[hemi].values()])
             df = pd.DataFrame(cnx_row[:,col_order],
-                              ["{}, {} to {} cortex".format(cond_keys[cond], COI_k, hemi_name[hemi])],
+                              ["{}, ROI to {} cortex".format(cond_keys[cond], hemi_name[hemi])],
                               [label_names[idx][:-3] for idx in list(col_order)])
             dfs.append(df)
     heat_df = dfs[0].append(dfs[1:])
@@ -95,9 +119,9 @@ for COI_k, COI_v in COIs.items():
             del heat_df[col]
     #heat_df += 0.5
 
-    fig, axes = plt.subplots(1, 2, figsize=(38.4, 10.8))
+    fig, axes = plt.subplots(1, 2, figsize=(38.4, 21.6))
     sns.heatmap(heat_df, xticklabels=True, vmin=-0.02, vmax=0.02, ax=axes[0],
-                cbar_kws={"label":"dPTE"})
+                cbar_kws={"label":"dPTE"}, linewidths=2)
 
     # sort out the colors for each region
     regs = list(heat_df.columns)
@@ -112,20 +136,11 @@ for COI_k, COI_v in COIs.items():
         xtl.set_c(reg_colors[xtl.get_text()])
     axes[0].set_xticklabels(xtls)
 
-    labels_to_plot = [l for r in reg_colors.keys() for l in labels if r==l.name[:-3] and "lh" in l.name]
-    brain = plot_rgba(np.stack(list(reg_colors.values())), labels_to_plot, parc,
-                      figsize=(1920,1080), hemi="lh")
-    for roi in COI_v:
-        lab = labels[label_names.index(roi)]
-        brain.add_label(lab, color=COI_cols[COI_k], borders=True, hemi="lh")
-    brain.show_view(**{"view":"lateral","distance":300,"hemi":"lh"})
-    img_lat = brain.screenshot()
-    brain.show_view(**{"view":"dorsal","distance":400,"hemi":"lh"})
-    img_dor = brain.screenshot()
-    brain.close()
-    img = np.hstack((img_lat,img_dor[:,640:1280,]))
+    img = brain_pane(parc, reg_colors, labels, COI_v, COI_cols[COI_k])
+
     axes[1].imshow(img)
     plt.axis("off")
+    plt.suptitle("Simple model connectivity: {} to left/right cortex".format(COI_k))
     plt.tight_layout()
     plt.savefig("../images/coi_simp_{}.png".format(COI_k))
 
@@ -135,7 +150,12 @@ cond_keys = {"Intercept":"Resting",
              "C(Block, Treatment('rest'))[T.audio]":"Audio",
              "C(Block, Treatment('rest'))[T.visual]":"Visual",
              "C(Block, Treatment('rest'))[T.visselten]":"Audio distraction",
-             "params":"Sig. change"}
+             "params":"Difference"}
+simp_keys = {"Intercept":"Resting",
+             "C(Block, Treatment('rest'))[T.audio]":"Condition",
+             "C(Block, Treatment('rest'))[T.visual]":"Condition",
+             "C(Block, Treatment('rest'))[T.visselten]":"Condition",
+             "params":"Difference"}
 
 pred = predicted["cond"]
 params = aic_comps["sig_params"]
@@ -181,7 +201,7 @@ for COI_k, COI_v in COIs.items():
                 cnx_row = np.nanmean(cnx_preds[cond][row_inds,], axis=0, keepdims=True)
                 col_order = np.array([v[1] for v in label_hemi[hemi].values()])
                 df = pd.DataFrame(cnx_row[:,col_order],
-                                  ["{}, {} to {} cortex".format(cond_keys[cond], COI_k, hemi_name[hemi])],
+                                  ["{}, ROI to {} cortex".format(simp_keys[cond], hemi_name[hemi])],
                                   [label_names[idx][:-3] for idx in list(col_order)])
                 dfs.append(df)
         heat_df = dfs[0].append(dfs[1:])
@@ -192,9 +212,9 @@ for COI_k, COI_v in COIs.items():
                 del heat_df[col]
         #heat_df += 0.5
 
-        fig, axes = plt.subplots(1, 2, figsize=(38.4, 10.8))
+        fig, axes = plt.subplots(1, 2, figsize=(38.4, 21.6))
         sns.heatmap(heat_df, xticklabels=True, vmin=-0.02, vmax=0.02, ax=axes[0],
-                    cbar_kws={"label":"dPTE"})
+                    cbar_kws={"label":"dPTE"}, linewidths=2)
 
         # sort out the colors for each region
         regs = list(heat_df.columns)
@@ -209,25 +229,10 @@ for COI_k, COI_v in COIs.items():
             xtl.set_c(reg_colors[xtl.get_text()])
         axes[0].set_xticklabels(xtls)
 
-        labels_to_plot = [l for r in reg_colors.keys() for l in labels if r==l.name[:-3] and "lh" in l.name]
+        img = brain_pane(parc, reg_colors, labels, COI_v, COI_cols[COI_k])
 
-        brain = plot_rgba(np.stack(list(reg_colors.values())), labels_to_plot, parc,
-                          figsize=(1920,1080), hemi="lh")
-
-        for roi in COI_v:
-            # for display purposes, show everything as lh
-            this_roi = roi[:-3] + "-lh"
-            lab = labels[label_names.index(this_roi)]
-            brain.add_label(lab, color=COI_cols[COI_k], borders=True, hemi="lh")
-
-        brain.show_view(**{"view":"lateral","distance":300,"hemi":"lh"})
-        img_lat = brain.screenshot()
-        brain.show_view(**{"view":"dorsal","distance":400,"hemi":"lh"})
-        img_dor = brain.screenshot()
-        brain.close()
-        img = np.hstack((img_lat,img_dor[:,640:1280,]))
         axes[1].imshow(img)
         plt.axis("off")
+        plt.suptitle("Condition model connectivity, {} condition: {} to left/right cortex".format(cond_keys[stat_cond], COI_k))
         plt.tight_layout()
-        plt.savefig("../images/coi_cond_{}_{}.png".format(COI_k,
-                                                          cond_keys[cond]))
+        plt.savefig("../images/coi_cond_{}_{}.png".format(COI_k, cond_keys[stat_cond]))
