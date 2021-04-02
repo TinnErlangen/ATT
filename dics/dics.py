@@ -10,10 +10,9 @@ subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
          "ATT_24", "ATT_25", "ATT_26", "ATT_28", "ATT_31", "ATT_33",
          "ATT_34", "ATT_35", "ATT_36", "ATT_37"]
-subjs = ["ATT_31", "ATT_33", "ATT_34", "ATT_35", "ATT_36", "ATT_37"]
 
 # ATT_30/KER27, ATT_27, ATT_32/EAM67   excluded for too much head movement between blocks
-
+# ATT_29 did not respond
 
 
 band_info = {}
@@ -106,7 +105,7 @@ for k,v in band_info.items():
         #         stc.save("{a}stcs/nc_{b}_{c}_{f0}-{f1}Hz_{d}_{sp}".format(
         #                   a=proc_dir, b=sub, c=epo_name, f0=f[0], f1=f[-1],
         #                   d=event, sp=spacing))
-        
+
         # now byresp epo
         for run in ["audio","visual","visselten"]:
             epo_name = "{dir}{sub}_{run}_byresp-epo.fif".format(

@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from mne.viz import Brain
 from mayavi import mlab
 import pyvista as pv
+import pandas as pd
 from matplotlib.pyplot import cm
 import mne
 mne.viz.set_3d_backend("pyvista")
@@ -492,7 +493,8 @@ def plot_rgba(vec_rgba, labels, parc, hemi="both", lup_title=None,
     if rdown_title:
         brain.add_text(0.7, 0., rdown_title, "rdown", font_size=40)
 
-    brain.add_annotation(parc,color="black", alpha=1.)
+
+    brain.add_annotation(parc, color="black", alpha=1.)
 
     for l_idx, l in enumerate(labels):
         if np.array_equal(vec_rgba[l_idx], [0,0,0,0]):
@@ -501,6 +503,99 @@ def plot_rgba(vec_rgba, labels, parc, hemi="both", lup_title=None,
 
     brain.show()
     return brain
+
+def plot_parc_compare(parc_outer, parc_inner, hemi="both",
+                      lup_title=None, ldown_title=None, rup_title=None,
+                      rdown_title=None, figsize=2160,
+                      subjects_dir="/home/jev/hdd/freesurfer/subjects",
+                      uniform_weight=False, surface="inflated",
+                      brain_alpha=1.):
+
+    brain = Brain('fsaverage', hemi, surface, alpha=brain_alpha,
+                   subjects_dir=subjects_dir, size=figsize, show=False)
+    if lup_title:
+        brain.add_text(0, 0.8, lup_title, "lup", font_size=40)
+    if ldown_title:
+        brain.add_text(0, 0, ldown_title, "ldown", font_size=40)
+    if rup_title:
+        brain.add_text(0.7, 0.8, rup_title, "rup", font_size=40)
+    if rdown_title:
+        brain.add_text(0.7, 0., rdown_title, "rdown", font_size=40)
+
+    vertex_to_label_ids = {}
+    for parc_name, parc in zip(["parc_in", "parc_out"],
+                               [parc_inner, parc_outer]):
+        labels = mne.read_labels_from_annot(subject="fsaverage",
+                                            parc=parc,
+                                            hemi="lh",
+                                            subjects_dir=subjects_dir)
+        vertex_to_label_id = np.full(brain.geo["lh"].coords.shape[0], -1)
+        for idx, label in enumerate(labels):
+            vertex_to_label_id[label.vertices] = idx
+        vertex_to_label_ids[parc_name] = vertex_to_label_id
+
+    # go through inner labels and see how they lay on the outer label
+    in_labels = mne.read_labels_from_annot(subject="fsaverage",
+                                        parc=parc_inner,
+                                        hemi="lh",
+                                        subjects_dir=subjects_dir)
+    out_labels = mne.read_labels_from_annot(subject="fsaverage",
+                                        parc=parc_outer,
+                                        hemi="lh",
+                                        subjects_dir=subjects_dir)
+
+    df_dict = {"In_Region":[], "Out_Region":[], "Overlap":[]}
+    for label_idx, label in enumerate(in_labels):
+        in_inds = np.where(vertex_to_label_ids["parc_in"]==label_idx)[0]
+        out_triff = vertex_to_label_ids["parc_out"][in_inds]
+        uniques, counts = np.unique(out_triff, return_counts=True)
+        total = counts.sum()
+        for c_idx in range(len(uniques)):
+            df_dict["In_Region"].append(label.name[:-3])
+            df_dict["Out_Region"].append(out_labels[uniques[c_idx]].name[:-3])
+            df_dict["Overlap"].append(counts[c_idx]/total)
+    df = pd.DataFrame.from_dict(df_dict)
+
+    # make the table
+    label_names = [l.name[:-3] for l in in_labels]
+    label_colors = [l.color for l in in_labels]
+    out_texts = []
+    for ln in label_names:
+        this_df = df.query("In_Region=='{}'".format(ln))
+        this_df = this_df.sort_values("Overlap", ascending=False)
+        anatomic_str = ""
+        for row_idx, row in this_df.iterrows():
+            if row["Overlap"] == 1:
+                anatomic_str += row["Out_Region"]
+            elif row["Overlap"] < .05:
+                continue
+            else:
+                anatomic_str += "{} ({}), ".format(row["Out_Region"],
+                                                 np.round(row["Overlap"],
+                                                 decimals=2))
+        if anatomic_str[-2:] == ", ":
+            out_texts.append(anatomic_str[:-2]) # don't want last comma and space
+    cellText = list(zip(label_names, out_texts))
+
+    fig, ax = plt.subplots(1, 1, figsize=(19.2,21.6))
+    table = ax.table(cellText,
+                      colLabels=["RegionGrowing70", "Anatomical region"],
+                      bbox=[0,0,1,1], rowColours=label_colors,
+                      colWidths=[6.2, 13])
+    table.set_fontsize(100)
+    ax.axis("off")
+    #plt.tight_layout()
+
+
+
+    brain.add_annotation(parc_outer, color="black")
+    brain.add_annotation(parc_inner)
+
+    brain.show()
+
+    breakpoint()
+    return brain
+
 
 """ calculate the corelation distance of dPTE connectivity matrices """
 def pw_cor_dist(mat,inds):

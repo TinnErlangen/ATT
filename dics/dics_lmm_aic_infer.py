@@ -1,6 +1,6 @@
 from statsmodels.regression.mixed_linear_model import MixedLMResults
 import numpy as np
-from cnx_utils import plot_rgba, write_brain_image
+from cnx_utils import plot_rgba, write_brain_image, plot_parc_compare
 import mne
 import pickle
 import matplotlib.pyplot as plt
@@ -118,6 +118,9 @@ brains = []
 #     this_rgba[inds,] = np.array([1,1,0,1])
 #     brains.append(plot_rgba(this_rgba, labels, parc, lup_title="Only Null rejected"))
 
+brains.append(plot_parc_compare("aparc", "RegionGrowing_70"))
+breakpoint()
+
 vecs = aic_comps["simp_params"].copy()
 vecs_abs = abs(vecs)
 va_min, va_max, = vecs_abs[vecs_abs!=0].min(), vecs_abs.max()
@@ -126,7 +129,8 @@ this_rgba = np.zeros((len(labels), 4))
 this_rgba[vec_norm>0,0] = 1
 this_rgba[vec_norm<0,2] = 1
 this_rgba[vec_norm!=0,3] = np.abs(vec_norm[vec_norm!=0])
-brains.append(plot_rgba(this_rgba, labels, parc, lup_title="Task power change"))
+brains.append(plot_rgba(this_rgba, labels, parc,
+                        lup_title="Task power change"))
 write_brain_image("task_power", views, brains[-1], dir="../images/")
 
 # changes from rest for each individual task

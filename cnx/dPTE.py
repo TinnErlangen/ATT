@@ -1,8 +1,6 @@
 from mne.time_frequency.tfr import tfr_array_morlet
 from mne.filter import filter_data
 from scipy.signal import hilbert
-from scipy.stats import circstd
-from scipy.sparse import triu
 from itertools import combinations
 import numpy as np
 from joblib import Parallel, delayed
