@@ -24,6 +24,10 @@ views = {"left":{"view":"lateral","distance":800,"hemi":"lh"},
          "right":{"view":"lateral","distance":800,"hemi":"rh"},
          "upper":{"view":"dorsal","distance":900}
 }
+parc_ov_views = {"left":{"view":"lateral","distance":500,"hemi":"lh"},
+                 "right":{"view":"lateral","distance":500,"hemi":"rh"},
+                 "upper":{"view":"dorsal","distance":500}
+}
 
 models = ["null","simple","cond"]
 vars = ["aics", "order", "probs", "threshed"]
@@ -119,7 +123,7 @@ brains = []
 #     brains.append(plot_rgba(this_rgba, labels, parc, lup_title="Only Null rejected"))
 
 brains.append(plot_parc_compare("aparc", "RegionGrowing_70"))
-breakpoint()
+write_brain_image("parc_overlap", parc_ov_views, brains[-1], dir="../images/")
 
 vecs = aic_comps["simp_params"].copy()
 vecs_abs = abs(vecs)

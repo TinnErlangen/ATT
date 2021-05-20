@@ -12,6 +12,7 @@ import pyvista as pv
 import pandas as pd
 from matplotlib.pyplot import cm
 import mne
+import csv
 mne.viz.set_3d_backend("pyvista")
 
 class TriuSparse():
@@ -479,7 +480,7 @@ def plot_rgba_cnx(mat_rgba, labels, parc, lup_title=None,
 
 def plot_rgba(vec_rgba, labels, parc, hemi="both", lup_title=None,
               ldown_title=None, rup_title=None, rdown_title=None,
-              figsize=2160, subjects_dir="/home/jev/hdd/freesurfer/subjects",
+              figsize=1920, subjects_dir="/home/jev/hdd/freesurfer/subjects",
               uniform_weight=False, surface="inflated", brain_alpha=1.):
 
     brain = Brain('fsaverage', hemi, surface, alpha=brain_alpha,
@@ -536,15 +537,15 @@ def plot_parc_compare(parc_outer, parc_inner, hemi="both",
 
     # go through inner labels and see how they lay on the outer label
     in_labels = mne.read_labels_from_annot(subject="fsaverage",
-                                        parc=parc_inner,
-                                        hemi="lh",
-                                        subjects_dir=subjects_dir)
+                                           parc=parc_inner,
+                                           hemi="lh",
+                                           subjects_dir=subjects_dir)
     out_labels = mne.read_labels_from_annot(subject="fsaverage",
-                                        parc=parc_outer,
-                                        hemi="lh",
-                                        subjects_dir=subjects_dir)
+                                            parc=parc_outer,
+                                            hemi="lh",
+                                            subjects_dir=subjects_dir)
 
-    df_dict = {"In_Region":[], "Out_Region":[], "Overlap":[]}
+    df_dict = {"In_Region":[], "Out_Region":[], "Overlap":[], }
     for label_idx, label in enumerate(in_labels):
         in_inds = np.where(vertex_to_label_ids["parc_in"]==label_idx)[0]
         out_triff = vertex_to_label_ids["parc_out"][in_inds]
@@ -574,17 +575,13 @@ def plot_parc_compare(parc_outer, parc_inner, hemi="both",
                                                  np.round(row["Overlap"],
                                                  decimals=2))
         if anatomic_str[-2:] == ", ":
-            out_texts.append(anatomic_str[:-2]) # don't want last comma and space
-    cellText = list(zip(label_names, out_texts))
+            anatomic_str = anatomic_str[:-2] # don't want last comma and space
+        out_texts.append(anatomic_str)
+    cellText = list(zip(label_names, out_texts, label_colors))
 
-    fig, ax = plt.subplots(1, 1, figsize=(19.2,21.6))
-    table = ax.table(cellText,
-                      colLabels=["RegionGrowing70", "Anatomical region"],
-                      bbox=[0,0,1,1], rowColours=label_colors,
-                      colWidths=[6.2, 13])
-    table.set_fontsize(100)
-    ax.axis("off")
-    #plt.tight_layout()
+    with open("parc_overlap.csv", "w") as f:
+        writer = csv.writer(f)
+        writer.writerows(cellText)
 
 
 
@@ -592,8 +589,6 @@ def plot_parc_compare(parc_outer, parc_inner, hemi="both",
     brain.add_annotation(parc_inner)
 
     brain.show()
-
-    breakpoint()
     return brain
 
 
@@ -618,14 +613,8 @@ def write_brain_image(name, views, brain, dir=None):
         scr = brain.screenshot()
         img_list.append(scr)
 
-    img = np.zeros((2160*2,2160*2,3),dtype=int)
-    img[:2160,:2160,] = img_list[0]
-    img[:2160,2160:,] = img_list[1]
-    img[2160:,2160//2:2160//2+2160,] = img_list[2]
-
-    plt.figure(figsize=(38.4,21.6))
-    plt.imshow(img)
+    fig, axes = plt.subplots(1, 3, figsize=(3*scr.shape[0]/100, scr.shape[1]/100))
+    for ax, img in zip(axes, img_list):
+        ax.imshow(img)
+        ax.axis("off")
     plt.tight_layout()
-    plt.axis("off")
-    plt.savefig("{}{}.png".format(dir, name))
-    plt.close("all")
