@@ -65,7 +65,7 @@ band_info["gamma_2"] = {"freqs":list(np.arange(60,91)),"cycles":9}
 
 # parameters and setup
 root_dir = "/home/jev/hdd/ATT_dat/"
-#root_dir = "/scratch/jeffhanna/ATT_dat/"
+root_dir = "/scratch/jeffhanna/ATT_dat/"
 proc_dir = root_dir + "proc/"
 spacing = "ico4"
 conds = ["rest","audio","visual","visselten"]
