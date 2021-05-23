@@ -1,14 +1,30 @@
 import numpy as np
 import mne
-from cnx_utils import load_sparse, phi
 import argparse
 import pickle
 from statsmodels.regression.mixed_linear_model import MixedLM
-from mne.stats.cluster_level import _setup_connectivity, _find_clusters, \
-    _reshape_clusters
 import pandas as pd
 import warnings
 warnings.filterwarnings("ignore")
+
+def load_sparse(filename,convert=True,full=False,nump_type="float32"):
+    with open(filename,"rb") as f:
+        result = pickle.load(f)
+    if convert:
+        full_mat = np.zeros(result["mat_sparse"].shape[:-1] + \
+          (result["mat_res"],result["mat_res"])).astype(nump_type)
+        full_mat[...,result["mat_inds"][0],result["mat_inds"][1]] = \
+          result["mat_sparse"]
+        result = full_mat
+    return result
+
+def phi(mat, k=0):
+    if len(mat.shape)>2:
+        triu_inds = np.triu_indices(mat.shape[1],k=k)
+        return mat[...,triu_inds[0],triu_inds[1]]
+    else:
+        triu_inds = np.triu_indices(mat.shape[0],k=k)
+        return mat[triu_inds[0],triu_inds[1]]
 
 def mass_uv_mixedlmm(formula, data, uv_data, group_id, re_formula=None):
     mods = []
@@ -48,8 +64,8 @@ band_info["gamma_1"] = {"freqs":list(np.arange(41,60)),"cycles":9}
 band_info["gamma_2"] = {"freqs":list(np.arange(60,91)),"cycles":9}
 
 # parameters and setup
-root_dir = "/home/jeff/ATT_dat/"
-root_dir = "/scratch/jeffhanna/ATT_dat/"
+root_dir = "/home/jev/hdd/ATT_dat/"
+#root_dir = "/scratch/jeffhanna/ATT_dat/"
 proc_dir = root_dir + "proc/"
 spacing = "ico4"
 conds = ["rest","audio","visual","visselten"]
