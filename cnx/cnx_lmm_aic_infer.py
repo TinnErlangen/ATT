@@ -1,7 +1,7 @@
 from statsmodels.regression.mixed_linear_model import MixedLMResults
 import numpy as np
 from cnx_utils import (plot_undirected_cnx, plot_directed_cnx, plot_rgba_cnx,
-                       load_sparse, write_brain_image)
+                       load_sparse, make_brain_figure)
 import mne
 import pickle
 import pandas as pd
@@ -179,20 +179,20 @@ for stat_cond,cond in zip(stat_conds,conds):
                          alpha_min=alpha_min,alpha_max=alpha_max,
                          ldown_title=cond, top_cnx=top_cnx))
     if write_images:
-        write_brain_image(cond, views, params_brains[-1], "../images/")
+        make_brain_figure(views, params_brains[-1])
 
 params_brains.append(plot_directed_cnx(cnx_params["simple_task"],labels,parc,
                      alpha_min=None,alpha_max=None,
                      ldown_title="Simple (task)", top_cnx=top_cnx))
 if write_images:
-    write_brain_image("simple_task", views, params_brains[-1], "../images/")
+    make_brain_figure(views, params_brains[-1])
 
 params_brains.append(plot_directed_cnx(cnx_params["simple_rest"],labels,parc,
                      alpha_min=None,alpha_max=None,
                      ldown_title="Simple (rest)", top_cnx=top_cnx))
 if write_images:
     if write_images:
-        write_brain_image("simple_rest", views, params_brains[-1], "../images/")
+        make_brain_figure(views, params_brains[-1])
 
 # make 4D matrix with RGBA
 mat_rgba = np.zeros((mat_n, mat_n, 4))
@@ -215,5 +215,4 @@ params_brains[-1]._renderer.plotter.add_legend([["Audio","r"],["Visual","g"],
                                                ["Visselten","b"]],
                                                bcolor=(0,0,0))
 if write_images:
-    write_brain_image("rainbow", views, params_brains[-1],
-                "../images/")
+    make_brain_figure(views, params_brains[-1])

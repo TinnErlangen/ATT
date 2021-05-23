@@ -52,7 +52,7 @@ root_dir = "/home/jeff/ATT_dat/"
 root_dir = "/scratch/jeffhanna/ATT_dat/"
 proc_dir = root_dir + "proc/"
 spacing = "ico4"
-conds = ["rest","audio","visual","visselten","zaehlen"]
+conds = ["rest","audio","visual","visselten"]
 band = opt.band
 perm_n = opt.perm
 node_n = 2415
@@ -74,7 +74,6 @@ idx_border = 0
 for sub_idx,sub in enumerate(subjs):
     idx_borders.append([idx_border])
     for cond_idx,cond in enumerate(conds):
-        # we actually only need the dPTE to get the number of trials
         data_temp = load_sparse("{}nc_{}_{}_dPTE_{}.sps".format(proc_dir, sub,
                                                                 cond, band))
         for epo_idx in range(data_temp.shape[0]):

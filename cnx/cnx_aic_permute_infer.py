@@ -1,7 +1,7 @@
 import numpy as np
 import pickle
 
-proc_dir = "/home/jeff/ATT_dat/proc/"
+proc_dir = "/home/jev/hdd/ATT_dat/proc/"
 band = "alpha_1"
 file_num = 10
 per_file = 100
@@ -9,6 +9,9 @@ perm_n = file_num*per_file
 node_n = 2415
 models = ["null","simple","cond"]
 threshold = 0.001
+# 
+# with open("{}{}/aicnoZ.pickle".format(proc_dir,band), "rb") as f:
+#     aic_comps = pickle.load(f)
 
 aics = np.zeros((len(models),node_n,perm_n))
 for f_idx, pn_idx in enumerate(range(0,perm_n,per_file)):

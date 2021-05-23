@@ -11,6 +11,7 @@ from mayavi import mlab
 import pyvista as pv
 import pandas as pd
 from matplotlib.pyplot import cm
+from matplotlib.colors import Normalize, ListedColormap
 import mne
 import csv
 mne.viz.set_3d_backend("pyvista")
@@ -175,18 +176,19 @@ def cnx_cluster(f_vals, p_vals, cnx_n, p_thresh=0.05, edges=None):
         out_edges.append([edges[aei] for aei in act_ed_inds])
     return comp_f, out_edges
 
-def plot_directed_cnx(mat,labels,parc,lup_title=None,ldown_title=None,rup_title=None,
-                      rdown_title=None, figsize=2160, lineres=100,
+def plot_directed_cnx(mat_in,labels,parc,lup_title=None,ldown_title=None,rup_title=None,
+                      rdown_title=None, figsize=1280, lineres=100,
                       subjects_dir="/home/jev/hdd/freesurfer/subjects",
                       alpha_max=None, alpha_min=None, uniform_weight=False,
                       surface="inflated", alpha=1, top_cnx=50, bot_cnx=None,
                       centre=0, min_alpha=0.1, cmap_name="RdBu"):
 
     cmap = cm.get_cmap(cmap_name)
+    mat = mat_in.copy()
 
     if mat.min() >= centre or mat.max() < centre:
         print("Warning: Values do not seem to match specified centre of {}.".format(centre))
-    mat -= centre
+    mat[mat!=0] -= centre
 
     if top_cnx is not None:
         matflat = np.abs(mat.flatten())
@@ -207,6 +209,7 @@ def plot_directed_cnx(mat,labels,parc,lup_title=None,ldown_title=None,rup_title=
 
     brain = Brain('fsaverage', 'both', surface, alpha=alpha,
                   subjects_dir=subjects_dir, size=figsize, show=False)
+    brain.enable_depth_peeling()
     if lup_title:
         brain.add_text(0, 0.8, lup_title, "lup", font_size=40)
     if ldown_title:
@@ -256,10 +259,6 @@ def plot_directed_cnx(mat,labels,parc,lup_title=None,ldown_title=None,rup_title=
         alphas = (1-min_alpha)*((np.abs(mat[inds[0],inds[1]])-alpha_min)/(alpha_max-alpha_min)) + min_alpha
         alphas[alphas<0],alphas[alphas>1] = 0, 1
 
-    # mlab.points3d(origins[:,0],origins[:,1],origins[:,2],
-    #               alphas,scale_factor=10,color=(1,0,0),transparent=True)
-    # mlab.points3d(dests[:,0],dests[:,1],dests[:,2],
-    #               alphas,scale_factor=10,color=(0,0,1),transparent=True)
     for l_idx, l in enumerate(labels):
         if area_weight[l_idx] == 0:
             continue
@@ -270,10 +269,7 @@ def plot_directed_cnx(mat,labels,parc,lup_title=None,ldown_title=None,rup_title=
                                          color=(area_red[l_idx],0,
                                          area_blue[l_idx]),
                                          opacity=area_weight[l_idx])
-        # mlab.points3d(rrs[l_idx,0],rrs[l_idx,1],rrs[l_idx,2],
-        #               area_weight[l_idx],scale_factor=10,
-        #               color=(area_red[l_idx],0,area_blue[l_idx]),
-        #               transparent=True)
+
     spl_pts = np.empty((len(origins),3,lineres))
     for idx in range(len(origins)):
         curve = bezier.Curve(np.array([[origins[idx,0],spline_mids[idx,0],dests[idx,0]],
@@ -284,11 +280,13 @@ def plot_directed_cnx(mat,labels,parc,lup_title=None,ldown_title=None,rup_title=
         spline = pv.Spline(spl_pts[idx,].T, lineres)
         tube = spline.tube(radius=alphas[idx])
         tube["scalars"] = np.linspace(0,1,tube.n_points)
-        brain._renderer.plotter.add_mesh(tube, cmap=cmap,
-                                         opacity=alphas[idx])
-        # mlab.plot3d(spl_pts[idx,0,],spl_pts[idx,1,],spl_pts[idx,2,],
-        #             lingrad*255,tube_radius=alphas[idx]*2,colormap="RdBu",
-        #             opacity=alphas[idx])
+        alph_cm_rgbs = np.zeros((tube.n_points, 4))
+        alph_cm_rgbs[:, 0] = np.linspace(1,0,tube.n_points)
+        alph_cm_rgbs[:, 2] = np.linspace(0,1,tube.n_points)
+        alph_cm_rgbs[:, -1] = alphas[idx]
+        alpha_cm = ListedColormap(alph_cm_rgbs)
+        brain._renderer.plotter.add_mesh(tube, cmap=alpha_cm)
+
 
     brain._renderer.plotter.remove_scalar_bar()
     brain.show()
@@ -480,7 +478,7 @@ def plot_rgba_cnx(mat_rgba, labels, parc, lup_title=None,
 
 def plot_rgba(vec_rgba, labels, parc, hemi="both", lup_title=None,
               ldown_title=None, rup_title=None, rdown_title=None,
-              figsize=1920, subjects_dir="/home/jev/hdd/freesurfer/subjects",
+              figsize=1280, subjects_dir="/home/jev/hdd/freesurfer/subjects",
               uniform_weight=False, surface="inflated", brain_alpha=1.):
 
     brain = Brain('fsaverage', hemi, surface, alpha=brain_alpha,
@@ -606,15 +604,39 @@ def pw_cor_dist(mat,inds):
         dists[pair_idx] = dist
     return dists
 
-def write_brain_image(name, views, brain, dir=None):
+def make_brain_figure(views, brain, dir=None, cbar=None, vmin=None, vmax=None,
+                      cbar_label=""):
     img_list = []
     for k,v in views.items():
         brain.show_view(**v)
         scr = brain.screenshot()
         img_list.append(scr)
 
-    fig, axes = plt.subplots(1, 3, figsize=(3*scr.shape[0]/100, scr.shape[1]/100))
-    for ax, img in zip(axes, img_list):
-        ax.imshow(img)
-        ax.axis("off")
-    plt.tight_layout()
+    width = 3*scr.shape[0]/100
+    height = scr.shape[1]/100
+
+    cb_ratio = 6
+    pans = ["A", "B", "C"]
+    if cbar:
+        width += width * 1/cb_ratio
+        mos_str = ""
+        for pan in pans:
+            for x in range(cb_ratio):
+                mos_str += pan
+        mos_str += "D"
+        fig, axes = plt.subplot_mosaic(mos_str, figsize=(width, height))
+        for img_mos, img in zip(pans, img_list):
+            axes[img_mos].imshow(img)
+            axes[img_mos].axis("off")
+        norm = Normalize(vmin, vmax)
+        scalmap = cm.ScalarMappable(norm, cbar)
+        plt.colorbar(scalmap, cax=axes["D"])
+        axes["D"].tick_params(labelsize=48)
+        axes["D"].set_ylabel(cbar_label, fontsize=48)
+    else:
+        fig, axes = plt.subplots(1, 3, figsize=(width, height))
+        for ax, img in zip(axes, img_list):
+            ax.imshow(img)
+            ax.axis("off")
+
+    return fig
