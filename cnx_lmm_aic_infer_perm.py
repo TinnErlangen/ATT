@@ -6,26 +6,34 @@ import mne
 import pickle
 import pandas as pd
 from collections import Counter
+from os import listdir
 from mayavi import mlab
 import matplotlib.pyplot as plt
 plt.ion()
+
+def pval_from_perms(perms, val):
+    perms.sort()
+    loc = abs(perms - val).argmin()
+    pval = loc / len(perms)
+    return pval
 
 '''
 Here we want to load up the results calculated in cnx_lmm_compare, infer
 significance with the AIC, and visualise results
 '''
 
-proc_dir = "/home/jev/ATT_dat/lmm/"
-sps_dir = "/home/jev/ATT_dat/proc/"
+proc_dir = "/home/jev/ATT_dat/proc/"
+lmm_dir = "/home/jev/ATT_dat/lmm/"
 band = "alpha_1"
 node_n = 2415
-threshold = 0.001 # threshold for AIC comparison
+perm_n = 1024
+threshold = 0.05 # threshold for AIC comparison
 cond_threshold = 0.05 # theshold for condition p values
 parc = "RegionGrowing_70"
 labels = mne.read_labels_from_annot("fsaverage",parc)
 label_names = [label.name for label in labels]
 mat_n = len(labels)
-calc_aic = False
+calc_aic = True
 top_cnx = 100
 bot_cnx = None
 write_images = True
@@ -55,6 +63,20 @@ var_base = "C(Block, Treatment('rest'))" # stem of the condition names in statsm
 stat_conds = ["Intercept"] + [var_base+"[T."+cond+"]" for cond in conds[1:]] # convert simple cond names to statsmodels cond names
 
 if calc_aic:
+    # get permutations
+    perm_dir = "{}{}/cnx_perm/".format(proc_dir, band)
+    perm_file_list = listdir(perm_dir)
+    file_n = len(perm_file_list)
+    perms = {"null":np.zeros((node_n, perm_n)), "simple":np.zeros((node_n, 0)),
+             "cond":np.zeros((node_n, 0))}
+    for pf in perm_file_list:
+        with open("{}{}".format(perm_dir, pf), "rb") as f:
+            this_perm = pickle.load(f)
+        if 0 not in this_perm["null"]:
+            perms["null"] = np.tile(this_perm["null"], (1,file_n))
+        perms["simple"] = np.hstack((perms["simple"], this_perm["simple"]))
+        perms["cond"] = np.hstack((perms["cond"], this_perm["cond"]))
+
     aics = {mod:np.zeros(node_n) for mod in models}
     aics_pvals = {mod:[None for n in range(node_n)] for mod in models}
     aics_params = {mod:[None for n in range(node_n)] for mod in models}
@@ -64,7 +86,7 @@ if calc_aic:
         for n_idx in range(node_n):
             print(n_idx)
             try:
-                this_mod = MixedLMResults.load("{}{}/{}_reg70_lmm_{}{}.pickle".format(proc_dir,band,mod,n_idx,z_name))
+                this_mod = MixedLMResults.load("{}{}/{}_reg70_lmm_{}{}.pickle".format(lmm_dir,band,mod,n_idx,z_name))
             except:
                 continue
             aics[mod][n_idx] = this_mod.aic
@@ -100,16 +122,32 @@ if calc_aic:
                 continue
         aic_array = np.array([aics[mod][n_idx] for mod in models])
         aic_comps["aics"][n_idx,] = aic_array # store raw AIC values
-        aic_prob = np.exp((aic_array.min()-aic_array)/2) # convert AIC to p-values; less than threshold indicates they are different than the mininum (best) fit
-        aic_comps["probs"][n_idx,] = aic_prob
-        aic_order = np.argsort(aic_prob) # model indices sorted by fit from best to worst
-        aic_comps["order"][n_idx,] = aic_order
-        aic_comps["winner_ids"][n_idx] = np.where(aic_order==len(models)-1)[0][0] # model index of best fit model
-        aic_comps["winner_margin"][n_idx] = np.sort(aic_prob.copy())[len(models)-2] - aic_array.min() # distance between best and 2nd best fit model
-        #aic_comps["winner_margin"][n_idx] = np.max(1-aic_prob[aic_prob!=1])
-        aic_threshed = aic_prob.copy()
-        aic_threshed[aic_threshed<threshold] = 0
-        aic_threshed[aic_threshed>0] = 1
+        # get p-values for AICs from permutations
+        aic_pval = np.zeros(2)
+        simp_diff_perm = perms["simple"][n_idx] - perms["null"][n_idx]
+        if sum(np.isfinite(simp_diff_perm)) > 1000:
+            simp_diff = aics["simple"][n_idx] - aics["null"][n_idx]
+            aic_pval[0] = pval_from_perms(simp_diff_perm, simp_diff)
+        else:
+            aic_pval[0] = 0
+        cond_diff_perm = perms["cond"][n_idx] - perms["simple"][n_idx]
+        if sum(np.isfinite(simp_diff_perm)) > 1000:
+            cond_diff = aics["cond"][n_idx] - aics["simple"][n_idx]
+            aic_pval[1] = pval_from_perms(cond_diff_perm, cond_diff)
+        else:
+            aic_pval[1] = 0
+        aic_pval[aic_pval<threshold] = 1
+        aic_pval[aic_pval<1] = 0
+
+        if np.array_equal(aic_pval, [0,0]):
+            aic_threshed = np.array([1,0,0])
+        elif np.array_equal(aic_pval, [1,0]):
+            aic_threshed = np.array([0,1,0])
+        elif np.array_equal(aic_pval, [0,1]):
+            aic_threshed = np.array([0,0,1])
+        elif np.array_equal(aic_pval, [1,1]):
+            aic_threshed = np.array([0,1,1])
+
         aic_comps["threshed"][n_idx,] = aic_threshed # 0,1 indicator of statistical inference between models: best fit model or not significantly different from best fit are 1, otherwise 0
         if aic_comps["threshed"][n_idx].sum() == 1: # all other models significantly different than best model
             winner_idx = aic_comps["winner_ids"][n_idx]
@@ -122,8 +160,13 @@ if calc_aic:
         else:
             aic_comps["single_winner_ids"][n_idx] = None
 
-        if np.array_equal(aic_comps["threshed"][n_idx], np.array([0,1,1])): # simple and cond model significantly better than null model
+        if (np.array_equal(aic_comps["threshed"][n_idx], np.array([0,1,0])) or
+            np.array_equal(aic_comps["threshed"][n_idx], np.array([0,1,1]))): # simple and/or cond model significantly better than null model
+            # dual winner now a misnomer, but too lazy to change
             aic_comps["dual_winner"][n_idx] = 1 # mark 1 if all other models significantly different than best model
+
+            # TODO: It seems to be going into this loop now where it shouldn't?
+
             if aics_pvals["simple"][n_idx]["C(Block, Treatment('rest'))[T.task]"] < cond_threshold:
                 aic_comps["simple_sig_params"][n_idx][1] = aics_params["simple"][n_idx]["C(Block, Treatment('rest'))[T.task]"]
                 aic_comps["simple_sig_params"][n_idx][0] = aics_params["simple"][n_idx]["Intercept"]
@@ -132,10 +175,10 @@ if calc_aic:
         else:
             aic_comps["dual_winner"][n_idx] = 0
 
-    with open("{}{}/aic{}.pickle".format(proc_dir,band,z_name), "wb") as f:
+    with open("{}lmm/{}/aic_perm{}.pickle".format(proc_dir,band,z_name), "wb") as f:
         pickle.dump(aic_comps,f)
 else:
-    with open("{}{}/aic{}.pickle".format(proc_dir,band,z_name), "rb") as f:
+    with open("{}lmm/{}/aic_perm{}.pickle".format(proc_dir,band,z_name), "rb") as f:
         aic_comps = pickle.load(f)
 
 # plt.hist(aic_comps["winner_ids"])

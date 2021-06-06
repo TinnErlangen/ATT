@@ -54,7 +54,7 @@ band_info["gamma_1"] = {"freqs":list(np.arange(41,60)),"cycles":9}
 band_info["gamma_2"] = {"freqs":list(np.arange(60,91)),"cycles":9}
 
 # parameters and setup
-root_dir = "/home/jeff/ATT_dat/"
+root_dir = "/home/jev/ATT_dat/"
 #root_dir = "/scratch/jeffhanna/ATT_dat/"
 proc_dir = root_dir + "proc/"
 out_dir = root_dir + "lmm/"
