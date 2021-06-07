@@ -33,7 +33,7 @@ parc = "RegionGrowing_70"
 labels = mne.read_labels_from_annot("fsaverage",parc)
 label_names = [label.name for label in labels]
 mat_n = len(labels)
-calc_aic = True
+calc_aic = False
 top_cnx = 100
 bot_cnx = None
 write_images = True
@@ -57,7 +57,7 @@ views = {"left":{"view":"lateral","distance":800,"hemi":"lh"},
 }
 
 models = ["null","simple","cond"]
-vars = ["aics", "order", "probs", "threshed"] # these will form the main keys of aic_comps dictionary below
+vars = ["aics", "order", "probs", "winner"] # these will form the main keys of aic_comps dictionary below
 var_base = "C(Block, Treatment('rest'))" # stem of the condition names in statsmodels format
 
 stat_conds = ["Intercept"] + [var_base+"[T."+cond+"]" for cond in conds[1:]] # convert simple cond names to statsmodels cond names
@@ -103,12 +103,8 @@ if calc_aic:
 
     aic_comps = {var:np.zeros((node_n,len(models))) for var in vars}
     aic_comps["models"] = models
-    aic_comps["winner_ids"] = np.zeros(node_n)
-    aic_comps["winner_margin"] = np.zeros(node_n)
-    aic_comps["single_winner_ids"] = np.zeros(node_n)
     aic_comps["sig_params"] = np.zeros((node_n,len(stat_conds)))
     aic_comps["confint_params"] = np.zeros((node_n,len(stat_conds),2))
-    aic_comps["dual_winner"] = np.zeros(node_n)
     aic_comps["simple_sig_params"] = np.zeros((node_n, 2))
     aic_comps["simple_confint_params"] = np.zeros((node_n,2,2))
     aic_comps["predicted"] = aics_predicted
@@ -118,7 +114,6 @@ if calc_aic:
     for n_idx in range(node_n):
         for mod in models:
             if not aics[mod][n_idx]:
-                aic_comps["single_winner_ids"][n_idx] = None
                 continue
         aic_array = np.array([aics[mod][n_idx] for mod in models])
         aic_comps["aics"][n_idx,] = aic_array # store raw AIC values
@@ -129,54 +124,39 @@ if calc_aic:
             simp_diff = aics["simple"][n_idx] - aics["null"][n_idx]
             aic_pval[0] = pval_from_perms(simp_diff_perm, simp_diff)
         else:
-            aic_pval[0] = 0
+            aic_pval[0] = 1
         cond_diff_perm = perms["cond"][n_idx] - perms["simple"][n_idx]
         if sum(np.isfinite(simp_diff_perm)) > 1000:
             cond_diff = aics["cond"][n_idx] - aics["simple"][n_idx]
             aic_pval[1] = pval_from_perms(cond_diff_perm, cond_diff)
         else:
-            aic_pval[1] = 0
-        aic_pval[aic_pval<threshold] = 1
-        aic_pval[aic_pval<1] = 0
+            aic_pval[1] = 1
+        aic_threshed = aic_pval<threshold
 
-        if np.array_equal(aic_pval, [0,0]):
-            aic_threshed = np.array([1,0,0])
-        elif np.array_equal(aic_pval, [1,0]):
-            aic_threshed = np.array([0,1,0])
-        elif np.array_equal(aic_pval, [0,1]):
-            aic_threshed = np.array([0,0,1])
-        elif np.array_equal(aic_pval, [1,1]):
-            aic_threshed = np.array([0,1,1])
+        if np.array_equal(aic_threshed, [0,0]):
+            aic_winner = np.array([1,0,0])
+        elif np.array_equal(aic_threshed, [1,0]):
+            aic_winner = np.array([0,1,0])
+        elif np.array_equal(aic_threshed, [0,1]):
+            aic_winner = np.array([0,0,1])
+        elif np.array_equal(aic_threshed, [1,1]):
+            aic_winner = np.array([0,0,1])
 
-        aic_comps["threshed"][n_idx,] = aic_threshed # 0,1 indicator of statistical inference between models: best fit model or not significantly different from best fit are 1, otherwise 0
-        if aic_comps["threshed"][n_idx].sum() == 1: # all other models significantly different than best model
-            winner_idx = aic_comps["winner_ids"][n_idx]
-            aic_comps["single_winner_ids"][n_idx] = winner_idx # mark 1 if all other models significantly different than best model
-            if aic_comps["threshed"][n_idx][2] == 1: # if the best model was "cond," than find out which conditions were significantly different than rest
-                for stat_cond_idx,stat_cond in enumerate(stat_conds):
-                    if aics_pvals["cond"][n_idx][stat_cond] < cond_threshold:
-                        aic_comps["sig_params"][n_idx][stat_cond_idx] = aics_params["cond"][n_idx][stat_cond]
-                        aic_comps["confint_params"][n_idx][stat_cond_idx] = (aics_confint["cond"][n_idx].loc[stat_cond][0], aics_confint["cond"][n_idx].loc[stat_cond][1])
-        else:
-            aic_comps["single_winner_ids"][n_idx] = None
-
-        if (np.array_equal(aic_comps["threshed"][n_idx], np.array([0,1,0])) or
-            np.array_equal(aic_comps["threshed"][n_idx], np.array([0,1,1]))): # simple and/or cond model significantly better than null model
-            # dual winner now a misnomer, but too lazy to change
-            aic_comps["dual_winner"][n_idx] = 1 # mark 1 if all other models significantly different than best model
-
-            # TODO: It seems to be going into this loop now where it shouldn't?
-
+        aic_comps["winner"][n_idx,] = aic_winner # 0,1 indicator of statistical inference between models: best fit model or not significantly different from best fit are 1, otherwise 0
+        if aic_comps["winner"][n_idx][2] == 1: # if the best model was "cond," than find out which conditions were significantly different than rest
+            for stat_cond_idx,stat_cond in enumerate(stat_conds):
+                if aics_pvals["cond"][n_idx][stat_cond] < cond_threshold:
+                    aic_comps["sig_params"][n_idx][stat_cond_idx] = aics_params["cond"][n_idx][stat_cond]
+                    aic_comps["confint_params"][n_idx][stat_cond_idx] = (aics_confint["cond"][n_idx].loc[stat_cond][0], aics_confint["cond"][n_idx].loc[stat_cond][1])
+        if np.array_equal(aic_comps["winner"][n_idx], np.array([0,1,0])): # simple model wins
             if aics_pvals["simple"][n_idx]["C(Block, Treatment('rest'))[T.task]"] < cond_threshold:
                 aic_comps["simple_sig_params"][n_idx][1] = aics_params["simple"][n_idx]["C(Block, Treatment('rest'))[T.task]"]
                 aic_comps["simple_sig_params"][n_idx][0] = aics_params["simple"][n_idx]["Intercept"]
                 aic_comps["simple_confint_params"][n_idx] = (aics_confint["simple"][n_idx].loc["C(Block, Treatment('rest'))[T.task]"][0],
                                                              aics_confint["simple"][n_idx].loc["C(Block, Treatment('rest'))[T.task]"][1])
-        else:
-            aic_comps["dual_winner"][n_idx] = 0
 
     with open("{}lmm/{}/aic_perm{}.pickle".format(proc_dir,band,z_name), "wb") as f:
-        pickle.dump(aic_comps,f)
+        pickle.dump(aic_comps, f)
 else:
     with open("{}lmm/{}/aic_perm{}.pickle".format(proc_dir,band,z_name), "rb") as f:
         aic_comps = pickle.load(f)
@@ -194,7 +174,7 @@ for n_idx in range(node_n):
     for stat_cond_idx,stat_cond in enumerate(stat_conds):
         if aic_comps["sig_params"][n_idx][stat_cond_idx]:
             cnx_params[stat_cond][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["sig_params"][n_idx][stat_cond_idx]
-    if aic_comps["dual_winner"][n_idx]:
+    if np.array_equal(aic_comps["winner"][n_idx], [0,1,0]):
         cnx_params["simple_rest"][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["simple_sig_params"][n_idx][0]
         cnx_params["simple_task"][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["simple_sig_params"][n_idx][1]
 
@@ -246,11 +226,9 @@ for stat_cond in stat_conds[1:]:
     mat_rgba[...,idx] = abs(cnx_params[stat_cond])
     idx += 1
 rgba_norm = np.linalg.norm(mat_rgba[...,:3],axis=2)
-for idx in range(3):
-    nonzero = np.where(rgba_norm)
-    for x,y in zip(*nonzero):
-        mat_rgba[x,y,idx] /= rgba_norm[x,y]
-#rgba_norm = (rgba_norm-rgba_norm[rgba_norm>0].min())/(rgba_norm.max()-rgba_norm[rgba_norm>0].min())
+nonzero = np.where(rgba_norm)
+for x,y in zip(*nonzero):
+    mat_rgba[x,y,:3] /= rgba_norm[x,y]
 mat_rgba[...,-1] = rgba_norm
 params_brains.append(plot_rgba_cnx(mat_rgba.copy(), labels, parc,
                      ldown_title="Rainbow", top_cnx=top_cnx))

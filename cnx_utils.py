@@ -378,22 +378,26 @@ def plot_rgba_cnx(mat_rgba, labels, parc, lup_title=None,
                   top_cnx=50, bot_cnx=None):
 
     if top_cnx is not None:
-        matflat = np.abs(mat_rgba.flatten())
+        matflat = mat_rgba[...,3].flatten()
         try:
             thresh = np.sort(matflat[matflat>0])[-top_cnx]
         except:
             thresh = matflat[matflat>0].min()
-        mat_rgba[np.abs(mat_rgba)<thresh] = 0
+        out_inds = np.where(mat_rgba[...,3] < thresh)
+        for x,y in zip(*out_inds):
+            mat_rgba[x,y,] = np.zeros(4)
     if bot_cnx is not None:
-        matflat = np.abs(mat.flatten())
+        matflat = mat_rba[...,3].copy()
         try:
             thresh = np.sort(matflat[matflat>0])[-bot_cnx]
         except:
             thresh = matflat[matflat>0].max()
-        mat_rgba[np.abs(mat_rgba)>thresh] = 0
+        out_inds = np.where(mat_rgba[...,3] < thresh)
+        for x,y in zip(*out_inds):
+            mat_rgba[x,y,] = np.zeros(4)
 
     alpha = mat_rgba[...,-1].copy()
-    alpha_inds = alpha>0
+    alpha_inds = alpha > 0
     alpha[alpha_inds] = (alpha[alpha_inds] - alpha[alpha_inds].min()) / \
       (alpha.max() - alpha[alpha_inds].min())
     # put a floor on smallest value
