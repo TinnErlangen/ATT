@@ -1,7 +1,7 @@
 from statsmodels.regression.mixed_linear_model import MixedLMResults
 import numpy as np
 from cnx_utils import (plot_undirected_cnx, plot_directed_cnx, plot_rgba_cnx,
-                       load_sparse, make_brain_figure)
+                       load_sparse, make_brain_image)
 import mne
 import pickle
 import pandas as pd
@@ -9,7 +9,9 @@ from collections import Counter
 from os import listdir
 from mayavi import mlab
 import matplotlib.pyplot as plt
-plt.ion()
+import matplotlib
+#matplotlib.rcParams['figure.dpi'] = 1200
+
 
 def pval_from_perms(perms, val):
     perms.sort()
@@ -35,8 +37,9 @@ label_names = [label.name for label in labels]
 mat_n = len(labels)
 calc_aic = False
 top_cnx = 100
+figsize = 2160
 bot_cnx = None
-write_images = True
+write_images = False
 conds = ["rest","audio","visual","visselten","zaehlen"]
 z_name = ""
 no_Z = True
@@ -72,8 +75,6 @@ if calc_aic:
     for pf in perm_file_list:
         with open("{}{}".format(perm_dir, pf), "rb") as f:
             this_perm = pickle.load(f)
-        if 0 not in this_perm["null"]:
-            perms["null"] = np.tile(this_perm["null"], (1,file_n))
         perms["simple"] = np.hstack((perms["simple"], this_perm["simple"]))
         perms["cond"] = np.hstack((perms["cond"], this_perm["cond"]))
 
@@ -101,6 +102,20 @@ if calc_aic:
                 predicts[en] = this_mod.model.predict(this_mod.params, vector)
             aics_predicted[mod][n_idx] = predicts
 
+    # calculate the AIC delta thresholds from the permutations
+    null_tile = np.tile(np.expand_dims(aics["null"],1), (1,1024))
+    perm_simp_diff = perms["simple"] - null_tile
+    perm_simp_maxima, perm_simp_minima = (np.nanmax(perm_simp_diff, axis=1),
+                                          np.nanmin(perm_simp_diff, axis=1))
+    simp_thresh = np.quantile(perm_simp_minima, threshold/2)
+
+    perm_avg_tile = np.tile(np.nanmean(perms["simple"], axis=1, keepdims=True),
+                            (1, 1024))
+    perm_cond_diff = perms["cond"] - perm_avg_tile
+    perm_cond_maxima, perm_cond_minima = (np.nanmax(perm_cond_diff, axis=1),
+                                          np.nanmin(perm_cond_diff, axis=1))
+    cond_thresh = np.quantile(perm_cond_minima, threshold/2)
+
     aic_comps = {var:np.zeros((node_n,len(models))) for var in vars}
     aic_comps["models"] = models
     aic_comps["sig_params"] = np.zeros((node_n,len(stat_conds)))
@@ -117,38 +132,21 @@ if calc_aic:
                 continue
         aic_array = np.array([aics[mod][n_idx] for mod in models])
         aic_comps["aics"][n_idx,] = aic_array # store raw AIC values
-        # get p-values for AICs from permutations
-        aic_pval = np.zeros(2)
-        simp_diff_perm = perms["simple"][n_idx] - perms["null"][n_idx]
-        if sum(np.isfinite(simp_diff_perm)) > 1000:
-            simp_diff = aics["simple"][n_idx] - aics["null"][n_idx]
-            aic_pval[0] = pval_from_perms(simp_diff_perm, simp_diff)
-        else:
-            aic_pval[0] = 1
-        cond_diff_perm = perms["cond"][n_idx] - perms["simple"][n_idx]
-        if sum(np.isfinite(simp_diff_perm)) > 1000:
-            cond_diff = aics["cond"][n_idx] - aics["simple"][n_idx]
-            aic_pval[1] = pval_from_perms(cond_diff_perm, cond_diff)
-        else:
-            aic_pval[1] = 1
-        aic_threshed = aic_pval<threshold
+        simp_delta = aic_array[1] - aic_array[0]
+        cond_delta = aic_array[2] - aic_array[1]
+        winners = np.array([1,0,0])
+        if simp_delta < simp_thresh:
+            winners = np.array([0,1,0])
+        if cond_delta < cond_thresh:
+            winners = np.array([0,0,1])
 
-        if np.array_equal(aic_threshed, [0,0]):
-            aic_winner = np.array([1,0,0])
-        elif np.array_equal(aic_threshed, [1,0]):
-            aic_winner = np.array([0,1,0])
-        elif np.array_equal(aic_threshed, [0,1]):
-            aic_winner = np.array([0,0,1])
-        elif np.array_equal(aic_threshed, [1,1]):
-            aic_winner = np.array([0,0,1])
-
-        aic_comps["winner"][n_idx,] = aic_winner # 0,1 indicator of statistical inference between models: best fit model or not significantly different from best fit are 1, otherwise 0
+        aic_comps["winner"][n_idx,] = winners # 0,1 indicator of statistical inference between models: best fit model or not significantly different from best fit are 1, otherwise 0
         if aic_comps["winner"][n_idx][2] == 1: # if the best model was "cond," than find out which conditions were significantly different than rest
             for stat_cond_idx,stat_cond in enumerate(stat_conds):
                 if aics_pvals["cond"][n_idx][stat_cond] < cond_threshold:
                     aic_comps["sig_params"][n_idx][stat_cond_idx] = aics_params["cond"][n_idx][stat_cond]
                     aic_comps["confint_params"][n_idx][stat_cond_idx] = (aics_confint["cond"][n_idx].loc[stat_cond][0], aics_confint["cond"][n_idx].loc[stat_cond][1])
-        if np.array_equal(aic_comps["winner"][n_idx], np.array([0,1,0])): # simple model wins
+        elif aic_comps["winner"][n_idx][1] == 1: # simple model wins
             if aics_pvals["simple"][n_idx]["C(Block, Treatment('rest'))[T.task]"] < cond_threshold:
                 aic_comps["simple_sig_params"][n_idx][1] = aics_params["simple"][n_idx]["C(Block, Treatment('rest'))[T.task]"]
                 aic_comps["simple_sig_params"][n_idx][0] = aics_params["simple"][n_idx]["Intercept"]
@@ -196,23 +194,31 @@ all_params.sort()
 alpha_max, alpha_min = all_params[-1:], all_params[-top_cnx].min()
 alpha_max, alpha_min = 0.015, 0.001
 alpha_max, alpha_min = None, None
-params_brains = []
+params_brains = {}
 for stat_cond,cond in zip(stat_conds,conds):
-    params_brains.append(plot_directed_cnx(cnx_params[stat_cond],labels,parc,
-                         alpha_min=alpha_min,alpha_max=alpha_max,
-                         ldown_title=cond, top_cnx=top_cnx))
+    params_brains[cond] = plot_directed_cnx(cnx_params[stat_cond],labels,parc,
+                                            alpha_min=alpha_min,
+                                            alpha_max=alpha_max,
+                                            ldown_title=cond, top_cnx=top_cnx,
+                                            figsize=figsize)
     if write_images:
         make_brain_figure(views, params_brains[-1])
 
-params_brains.append(plot_directed_cnx(cnx_params["simple_task"],labels,parc,
-                     alpha_min=None,alpha_max=None,
-                     ldown_title="Simple (task)", top_cnx=top_cnx))
+params_brains["simple_task"] = plot_directed_cnx(cnx_params["simple_task"],
+                                                 labels, parc, alpha_min=None,
+                                                 alpha_max=None,
+                                                 ldown_title="Simple (task)",
+                                                 top_cnx=top_cnx,
+                                                 figsize=figsize)
 if write_images:
     make_brain_figure(views, params_brains[-1])
 
-params_brains.append(plot_directed_cnx(cnx_params["simple_rest"],labels,parc,
-                     alpha_min=None,alpha_max=None,
-                     ldown_title="Simple (rest)", top_cnx=top_cnx))
+params_brains["simple_rest"] = plot_directed_cnx(cnx_params["simple_rest"],
+                                                 labels, parc, alpha_min=None,
+                                                 alpha_max=None,
+                                                 ldown_title="Simple (rest)",
+                                                 top_cnx=top_cnx,
+                                                 figsize=figsize)
 if write_images:
     if write_images:
         make_brain_figure(views, params_brains[-1])
@@ -230,10 +236,43 @@ nonzero = np.where(rgba_norm)
 for x,y in zip(*nonzero):
     mat_rgba[x,y,:3] /= rgba_norm[x,y]
 mat_rgba[...,-1] = rgba_norm
-params_brains.append(plot_rgba_cnx(mat_rgba.copy(), labels, parc,
-                     ldown_title="Rainbow", top_cnx=top_cnx))
-params_brains[-1]._renderer.plotter.add_legend([["Audio","r"],["Visual","g"],
-                                               ["Visselten","b"]],
-                                               bcolor=(0,0,0))
+params_brains["rainbow"] = plot_rgba_cnx(mat_rgba.copy(), labels, parc,
+                                         ldown_title="Rainbow",
+                                         top_cnx=top_cnx, figsize=figsize)
+params_brains["rainbow"]._renderer.plotter.add_legend([["Audio","r"],
+                                                       ["Visual","g"],
+                                                       ["Visselten","b"]],
+                                                       bcolor=(0,0,0))
 if write_images:
     make_brain_figure(views, params_brains[-1])
+
+fontsize=165
+img_rat = 6
+pans = ["A", "B", "C", "D", "E"]
+pads = ["Z", "Y", "X", "W", "V"]
+descs = ["General task", "Auditory task", "Visual task",
+         "Aud. distraction task", "Rainbow"]
+conds = ["simple_task", "audio", "visual", "visselten", "rainbow"]
+mos_str = ""
+pad = True
+for pan, pad in zip(pans, pads):
+    for idx in range(img_rat):
+        mos_str += pan+"\n"
+    if pad:
+        mos_str += pad+"\n"
+
+fig, axes = plt.subplot_mosaic(mos_str, figsize=(64.8, 108))
+for desc, pan in zip(descs, pans):
+    axes[pan].set_title("{}".format(desc),
+                        fontsize=fontsize)
+    axes[pan].axis("off")
+for pad in pads:
+    axes[pad].axis("off")
+
+for pan, desc, cond in zip(pans, descs, conds):
+    img = make_brain_image(views, params_brains[cond], text=pan,
+                           text_loc="lup", text_pan=0)
+    axes[pan].imshow(img)
+plt.suptitle("Estimated connectivity change from resting state",
+             fontsize=fontsize)
+plt.savefig("../images/cnx_figure.png")

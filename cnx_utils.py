@@ -372,7 +372,7 @@ def plot_undirected_cnx(mat, labels, parc, fig=None, lup_title=None,
 
 def plot_rgba_cnx(mat_rgba, labels, parc, lup_title=None,
                   ldown_title=None, rup_title=None, rdown_title=None,
-                  figsize=2160, lineres=100,
+                  figsize=1280, lineres=100,
                   subjects_dir="/home/jev/hdd/freesurfer/subjects",
                   uniform_weight=False, surface="inflated", brain_alpha=1,
                   top_cnx=50, bot_cnx=None):
@@ -608,8 +608,9 @@ def pw_cor_dist(mat,inds):
         dists[pair_idx] = dist
     return dists
 
-def make_brain_figure(views, brain, dir=None, cbar=None, vmin=None, vmax=None,
-                      cbar_label=""):
+def make_brain_figure(views, brain, cbar=None, vmin=None, vmax=None,
+                      cbar_label="", cbar_orient="vertical",
+                      hide_cbar=False):
     img_list = []
     for k,v in views.items():
         brain.show_view(**v)
@@ -624,19 +625,32 @@ def make_brain_figure(views, brain, dir=None, cbar=None, vmin=None, vmax=None,
     if cbar:
         width += width * 1/cb_ratio
         mos_str = ""
-        for pan in pans:
+        if cbar_orient == "vertical":
+            for pan in pans:
+                for x in range(cb_ratio):
+                    mos_str += pan
+            mos_str += "D"
+        elif cbar_orient == "horizontal":
             for x in range(cb_ratio):
-                mos_str += pan
-        mos_str += "D"
+                for pan in pans:
+                    mos_str += pan
+                mos_str += "\n"
+            mos_str += "D"*len(pans)
         fig, axes = plt.subplot_mosaic(mos_str, figsize=(width, height))
         for img_mos, img in zip(pans, img_list):
             axes[img_mos].imshow(img)
             axes[img_mos].axis("off")
-        norm = Normalize(vmin, vmax)
-        scalmap = cm.ScalarMappable(norm, cbar)
-        plt.colorbar(scalmap, cax=axes["D"])
-        axes["D"].tick_params(labelsize=48)
-        axes["D"].set_ylabel(cbar_label, fontsize=48)
+        if not hide_cbar:
+            norm = Normalize(vmin, vmax)
+            scalmap = cm.ScalarMappable(norm, cbar)
+            plt.colorbar(scalmap, cax=axes["D"], orientation=cbar_orient)
+            axes["D"].tick_params(labelsize=48)
+            if cbar_orient == "horizontal":
+                axes["D"].set_xlabel(cbar_label, fontsize=48)
+            else:
+                axes["D"].set_ylabel(cbar_label, fontsize=48)
+        else:
+            axes["D"].axis("off")
     else:
         fig, axes = plt.subplots(1, 3, figsize=(width, height))
         for ax, img in zip(axes, img_list):
@@ -644,3 +658,22 @@ def make_brain_figure(views, brain, dir=None, cbar=None, vmin=None, vmax=None,
             ax.axis("off")
 
     return fig
+
+def make_brain_image(views, brain, orient="horizontal", text="",
+                     text_loc=None, text_pan=None, fontsize=160):
+    img_list = []
+    axis = 1 if orient=="horizontal" else 0
+    for k,v in views.items():
+        brain.show_view(**v)
+        scr = brain.screenshot()
+        img_list.append(scr)
+    if text != "":
+        img_txt_list = []
+        brain.add_text(0, 0.8, text, text_loc, font_size=fontsize)
+        for k,v in views.items():
+            brain.show_view(**v)
+            scr = brain.screenshot()
+            img_txt_list.append(scr)
+            img_list[text_pan] = img_txt_list[text_pan]
+    img = np.concatenate(img_list, axis=axis)
+    return img
