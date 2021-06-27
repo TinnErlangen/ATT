@@ -178,7 +178,7 @@ for stat_cond,cond in zip(stat_conds,conds):
     params_brains[cond] = plot_directed_cnx(cnx_params[stat_cond],labels,parc,
                                             alpha_min=alpha_min,
                                             alpha_max=alpha_max,
-                                            ldown_title=cond, top_cnx=top_cnx,
+                                            ldown_title="", top_cnx=top_cnx,
                                             figsize=figsize)
     if write_images:
         make_brain_figure(views, params_brains[-1])
@@ -186,7 +186,7 @@ for stat_cond,cond in zip(stat_conds,conds):
 params_brains["simple_task"] = plot_directed_cnx(cnx_params["simple_task"],
                                                  labels, parc, alpha_min=None,
                                                  alpha_max=None,
-                                                 ldown_title="Simple (task)",
+                                                 ldown_title="",
                                                  top_cnx=top_cnx,
                                                  figsize=figsize)
 if write_images:
@@ -195,7 +195,7 @@ if write_images:
 params_brains["simple_rest"] = plot_directed_cnx(cnx_params["simple_rest"],
                                                  labels, parc, alpha_min=None,
                                                  alpha_max=None,
-                                                 ldown_title="Simple (rest)",
+                                                 ldown_title="",
                                                  top_cnx=top_cnx,
                                                  figsize=figsize)
 if write_images:
@@ -216,12 +216,9 @@ for x,y in zip(*nonzero):
     mat_rgba[x,y,:3] /= rgba_norm[x,y]
 mat_rgba[...,-1] = rgba_norm
 params_brains["rainbow"] = plot_rgba_cnx(mat_rgba.copy(), labels, parc,
-                                         ldown_title="Rainbow",
+                                         ldown_title="",
                                          top_cnx=top_cnx, figsize=figsize)
-params_brains["rainbow"]._renderer.plotter.add_legend([["Audio","r"],
-                                                       ["Visual","g"],
-                                                       ["Visselten","b"]],
-                                                       bcolor=(0,0,0))
+
 if write_images:
     make_brain_figure(views, params_brains[-1])
 
@@ -248,9 +245,15 @@ for desc, pan in zip(descs, pans):
 for pad in pads:
     axes[pad].axis("off")
 
+legend_props = [["Audio","r"], ["Visual","g"], ["Aud. Distr.","b"]]
 for pan, desc, cond in zip(pans, descs, conds):
-    img = make_brain_image(views, params_brains[cond], text=pan,
-                           text_loc="lup", text_pan=0)
+    if cond == "rainbow":
+        img = make_brain_image(views, params_brains[cond], text=pan,
+                               text_loc="lup", text_pan=0, legend=legend_props,
+                               legend_pan=2)
+    else:
+        img = make_brain_image(views, params_brains[cond], text=pan,
+                               text_loc="lup", text_pan=0)
     axes[pan].imshow(img)
 plt.suptitle("Estimated connectivity change from resting state",
              fontsize=fontsize)

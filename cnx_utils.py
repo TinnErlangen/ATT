@@ -660,7 +660,8 @@ def make_brain_figure(views, brain, cbar=None, vmin=None, vmax=None,
     return fig
 
 def make_brain_image(views, brain, orient="horizontal", text="",
-                     text_loc=None, text_pan=None, fontsize=160):
+                     text_loc=None, text_pan=None, fontsize=160,
+                     legend=None, legend_pan=None):
     img_list = []
     axis = 1 if orient=="horizontal" else 0
     for k,v in views.items():
@@ -674,6 +675,14 @@ def make_brain_image(views, brain, orient="horizontal", text="",
             brain.show_view(**v)
             scr = brain.screenshot()
             img_txt_list.append(scr)
-            img_list[text_pan] = img_txt_list[text_pan]
+        img_list[text_pan] = img_txt_list[text_pan]
+    if legend:
+        legend_list = []
+        brain._renderer.plotter.add_legend(legend, bcolor=(0,0,0))
+        for k,v in views.items():
+            brain.show_view(**v)
+            scr = brain.screenshot()
+            legend_list.append(scr)
+        img_list[legend_pan] = legend_list[legend_pan]
     img = np.concatenate(img_list, axis=axis)
     return img

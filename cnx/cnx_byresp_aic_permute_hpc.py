@@ -128,11 +128,11 @@ if indep_var:
 else:
     col_idx = 1
 
-formula = "Brain ~ RT*C(Block, Treatment('audio'))"
+
 re_formula = "1 + RT"
 # permute
 perm_n = opt.perm
-aics = np.zeros((node_n, perm_n))
+aics = {mod:np.zeros((node_n, perm_n)) for mod in ["simple", "cond"]}
 for i in range(perm_n):
     print("Permutation {} of {}".format(i, perm_n))
     dm_perm = df.copy()
@@ -143,11 +143,20 @@ for i in range(perm_n):
             temp_slice = dm_perm["Block"][idx_border[0]:idx_border[1]].copy()
         temp_slice = temp_slice.sample(frac=1)
         dm_perm.iloc[idx_border[0]:idx_border[1],col_idx] = temp_slice.values
-    perm_mods = mass_uv_mixedlmm(formula, dm_perm, data, group_id,
+
+    formula = "Brain ~ RT*C(Block, Treatment('audio'))"
+    cond_mods = mass_uv_mixedlmm(formula, dm_perm, data, group_id,
                                  re_formula=re_formula)
-    for n_idx, pm in enumerate(perm_mods):
-        aics[n_idx,i] = pm.aic
+    for n_idx, pm in enumerate(cond_mods):
+        aics["cond"][n_idx,i] = pm.aic
 
+    formula = "Brain ~ RT+C(Block, Treatment('audio'))"
+    simp_mods = mass_uv_mixedlmm(formula, dm_perm, data, group_id,
+                                 re_formula=re_formula)
+    for n_idx, pm in enumerate(simp_mods):
+        aics["simple"][n_idx,i] = pm.aic
 
-np.save("{}cnx_{}_{}_byresp_perm_{}_{}.npy".format(proc_dir, indep_var, band, perm_n, opt.iter),
-        aics)
+filename = "{}cnx_{}_{}_byresp_perm_{}_{}.pickle".format(proc_dir, indep_var,
+                                                         band, perm_n, opt.iter)
+with open(filename, "wb") as f:
+    pickle.dump(aics, f)
