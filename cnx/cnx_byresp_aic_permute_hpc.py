@@ -81,6 +81,7 @@ root_dir = "/scratch/jeffhanna/ATT_dat/"
 proc_dir = root_dir + "proc/"
 out_dir = root_dir + "lmm/"
 spacing = "ico4"
+node_n = 2415
 conds = ["audio","visual","visselten","zaehlen"]
 z_name = {}
 wavs = ["4000Hz","4000cheby","7000Hz","4000fftf"]
@@ -130,8 +131,8 @@ else:
 formula = "Brain ~ RT*C(Block, Treatment('audio'))"
 re_formula = "1 + RT"
 # permute
-all_perm_tvals = []
 perm_n = opt.perm
+aics = np.zeros((node_n, perm_n))
 for i in range(perm_n):
     print("Permutation {} of {}".format(i, perm_n))
     dm_perm = df.copy()
@@ -144,9 +145,9 @@ for i in range(perm_n):
         dm_perm.iloc[idx_border[0]:idx_border[1],col_idx] = temp_slice.values
     perm_mods = mass_uv_mixedlmm(formula, dm_perm, data, group_id,
                                  re_formula=re_formula)
-    for pm in perm_mods:
-        all_perm_tvals.append(pm.tvalues.get(indep_var))
+    for n_idx, pm in enumerate(perm_mods):
+        aics[n_idx,i] = pm.aic
 
-all_perm_tvals = np.array(all_perm_tvals)
+
 np.save("{}cnx_{}_{}_byresp_perm_{}_{}.npy".format(proc_dir, indep_var, band, perm_n, opt.iter),
-        all_perm_tvals)
+        aics)
