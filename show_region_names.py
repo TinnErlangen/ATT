@@ -8,7 +8,7 @@ conds = ["audio", "visual", "visselten"]
 parc = "RegionGrowing_70"
 freq = "alpha_1"
 cluster_idx = 0
-subjects_dir = "/home/jev/freesurfer/subjects"
+subjects_dir = "/home/jev/hdd/freesurfer/subjects"
 
 # get constraint info
 net_names = ["rest-{}_{}_c{}".format(cond,freq,cluster_idx) for cond in conds]
@@ -27,10 +27,10 @@ figs = []
 brains = []
 constrain_regs = range(len(labels))
 for cr in constrain_regs:
-    if "-rh" in labels[cr].name:
+    if "-lh" in labels[cr].name:
         continue
     figs.append(mlab.figure(labels[cr].name))
-    brains.append(Brain('fsaverage', 'lh', 'inflated',
+    brains.append(Brain('fsaverage', 'rh', 'inflated',
                   subjects_dir=subjects_dir, figure=figs[-1], alpha=0.99))
     brains[-1].add_annotation(parc, color="black")
     brains[-1].add_label(labels[cr])

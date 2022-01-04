@@ -35,7 +35,7 @@ def brain_pane(parc, reg_colors, labels, COIs, COI_col):
     final_img = np.vstack(top_bot)
     return final_img
 
-proc_dir = "/home/jev/ATT_dat/lmm/"
+proc_dir = "/home/jev/ATT_dat/proc/lmm/"
 band = "alpha_1"
 parc = "RegionGrowing_70"
 labels = mne.read_labels_from_annot("fsaverage",parc)
@@ -43,6 +43,10 @@ label_names = [label.name for label in labels]
 mat_n = len(labels)
 triu_inds = np.triu_indices(mat_n, k=1)
 hemi_name = {"lh":"left", "rh":"right"}
+
+conds = ["rest", "audio", "visual", "visselten"]
+var_base = "C(Block, Treatment('rest'))"
+stat_conds = ["Intercept"] + [var_base+"[T."+cond+"]" for cond in conds[1:]] # convert simple cond names to statsmodels cond names
 
 # Get the y-location of the label
 label_ypos = {}
@@ -57,7 +61,8 @@ cond_keys = {"Intercept":"Resting","C(Block, Treatment('rest'))[T.task]":"Task",
 
 COI_cols = {'left motor': 'red', 'right motor': 'red',
             'left par-occipital': 'red', 'right par-occipital': 'red',
-            'left parietal': 'red', 'right parietal': 'red'}
+            'left parietal': 'red', 'right parietal': 'red',
+            "right temporal": "red"}
 
 
 conds = ["rest","audio","visual","visselten","zaehlen"]
@@ -69,7 +74,7 @@ if no_Z:
 
 simp_conds = ["Intercept", "C(Block, Treatment('rest'))[T.task]"]
 
-with open("{}{}/aic{}.pickle".format(proc_dir,band,z_name), "rb") as f:
+with open("{}{}/aic_perm{}.pickle".format(proc_dir,band,z_name), "rb") as f:
       aic_comps = pickle.load(f)
 predicted = aic_comps["predicted"]
 params = aic_comps["simple_sig_params"][:,1]
@@ -83,9 +88,9 @@ for COI_k, COI_v in COIs.items():
     pred = predicted["simple"]
     # generate mask
     mask = np.zeros((mat_n, mat_n))
-    mask[triu_inds[0], triu_inds[1]] = aic_comps["dual_winner"]
+    mask[triu_inds[0], triu_inds[1]] = aic_comps["winner"][:,1]
 
-    inds = list(np.where(aic_comps["dual_winner"])[0])
+    inds = list(np.where(aic_comps["winner"][:,1])[0])
     cnx_preds = {c:np.zeros((mat_n, mat_n)) for c in simp_conds}
     cnx_preds["params"] = np.zeros((mat_n, mat_n))
     dfs = []
@@ -125,10 +130,12 @@ for COI_k, COI_v in COIs.items():
 
     # sort out the colors for each region
     regs = list(heat_df.columns)
-    tile_num = len(regs)//10+1 if len(regs)%10 else len(regs)//10
-    x = np.tile(np.arange(10),tile_num)[:len(regs)]
+    lab_n = len(labels) // 2
+    lab_names = [l[:-3] for l in label_names if "lh" in l]
+    tile_num = lab_n//10+1 if lab_n%10 else lab_n//10
+    x = np.tile(np.arange(10),tile_num)[:lab_n]
     rgb = plt.get_cmap("tab10")(x)
-    reg_colors = {k:rgb[idx] for idx, k in enumerate(regs)}
+    reg_colors = {reg:rgb[lab_names.index(reg)] for reg in regs}
 
     # recolor the xticklabels
     xtls = axes[0].get_xticklabels()
@@ -160,29 +167,24 @@ simp_keys = {"Intercept":"Resting",
 pred = predicted["cond"]
 params = aic_comps["sig_params"]
 
-COIs = {"left motor":["L3969-lh", "L3395-lh"],
-        "right motor":["L3969-rh", "L3395-rh"],
-        "left par-occipital":["L4236_L1933-lh"],
-        "right par-occipital":["L4236_L1933-rh"],
-        "left parietal":["L4557-lh", "L7491_L4557-lh"],
-        "right parietal":["L4557-rh", "L7491_L4557-rh"]}
+COIs = {"right parietal":["L4236_L1933-rh"],#, "L4557-rh"],
+        "right temporal":["L7097_L4359-rh"]}
 
 for COI_k, COI_v in COIs.items():
     cond_dict = aic_comps["cond_dict"]
     stat_cond_dict = {v:k for k,v in cond_dict.items()}
     mask = np.zeros((mat_n, mat_n))
-    cond_winners = aic_comps["single_winner_ids"] == 2
-    mask[triu_inds[0], triu_inds[1]] = cond_winners
-    cond_vals = list(cond_dict.values())
-    for stat_cond in list(cond_vals)[1:]:
-        inds = list(np.where(cond_winners)[0])
+    cond_winners = np.where(aic_comps["winner"][:,2])[0]
+    mask[triu_inds[0], triu_inds[1]] = aic_comps["winner"][:,2]
+    for stat_cond in stat_conds[1:]:
+        inds = list(cond_winners)
         cnx_preds = {c:np.zeros((mat_n, mat_n)) for c in ["Intercept", stat_cond]}
         cnx_preds["params"]= np.zeros((mat_n, mat_n))
 
         dfs = []
 
         for idx in inds:
-            cnx_preds["params"][triu_inds[0][idx],triu_inds[1][idx]] = params[idx][cond_vals.index(stat_cond)]
+            cnx_preds["params"][triu_inds[0][idx],triu_inds[1][idx]] = params[idx][stat_conds.index(stat_cond)]
             for cond in ["Intercept", stat_cond]:
                 cnx_preds[cond][triu_inds[0][idx],triu_inds[1][idx]] = pred[idx][cond]
 

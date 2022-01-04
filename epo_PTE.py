@@ -18,7 +18,7 @@ def do_PTE(data):
     return compute_dPTE_rawPTE(d_phase, delay)
 
 proc_dir = "../proc/"
-subjects_dir = "/home/jeff/hdd/jeff/freesurfer/subjects/"
+subjects_dir = "/home/jev/hdd/freesurfer/subjects/"
 subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_17", "ATT_18", "ATT_19", "ATT_20", "ATT_21", "ATT_22", "ATT_23",
          "ATT_24", "ATT_25", "ATT_26", "ATT_28", "ATT_31",
@@ -35,9 +35,8 @@ mri_key = {"KIL13":"ATT_10","ALC81":"ATT_11","EAM11":"ATT_19","ENR41":"ATT_18",
            "GIZ04":"ATT_13","BAI97":"ATT_22","WAL70":"ATT_33",
            "ATT_15_fsaverage":"ATT_15"}
 sub_key = {v: k for k,v in mri_key.items()}
-runs = ["rest","audio","visselten","visual"]
-#runs = ["audio","visselten","visual"]
-runs = ["zaehlen"]
+
+runs = ["rest","audio","visselten","visual","zaehlen"]
 wavs = ["4000fftf","4000Hz","7000Hz","4000cheby"]
 
 inv_method="sLORETA"
@@ -47,17 +46,19 @@ n_jobs = 8
 spacing="ico5"
 
 band_info = {}
-band_info["theta_0"] = {"freqs":list(np.arange(3,7)),"cycles":3}
-band_info["alpha_0"] = {"freqs":list(np.arange(7,10)),"cycles":5}
-band_info["alpha_1"] = {"freqs":list(np.arange(10,13)),"cycles":7}
-band_info["beta_0"] = {"freqs":list(np.arange(13,22)),"cycles":9}
+band_info["theta_0"] = {"freqs":list(np.arange(4,9)),"cycles":3}
+band_info["alpha_0"] = {"freqs":list(np.arange(8,11)),"cycles":5}
+band_info["alpha_1"] = {"freqs":list(np.arange(10,14)),"cycles":7}
+#band_info["beta_0"] = {"freqs":list(np.arange(13,22)),"cycles":9}
+band_info["beta_0"] = {"freqs":list(np.arange(13,31)),"cycles":9}
 band_info["beta_1"] = {"freqs":list(np.arange(22,31)),"cycles":9}
-band_info["gamma_0"] = {"freqs":list(np.arange(31,41)),"cycles":9}
+#band_info["gamma_0"] = {"freqs":list(np.arange(31,41)),"cycles":9}
+band_info["gamma_0"] = {"freqs":list(np.arange(31,49)),"cycles":9}
 band_info["gamma_1"] = {"freqs":list(np.arange(41,60)),"cycles":9}
 band_info["gamma_2"] = {"freqs":list(np.arange(60,91)),"cycles":9}
 cyc_names = ["theta_0","alpha_0","alpha_1","beta_0","beta_1","gamma_0",
              "gamma_1","gamma_2"]
-cyc_names = ["beta_1","gamma_0","gamma_1","gamma_2"]
+cyc_names = ["theta_0","alpha_0","alpha_1","beta_0","gamma_0"]
 
 cov = mne.read_cov("{}empty-cov.fif".format(proc_dir))
 fs_labels = mne.read_labels_from_annot("fsaverage", "RegionGrowing_70",

@@ -42,26 +42,14 @@ subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_24", "ATT_25", "ATT_26", "ATT_28", "ATT_31", "ATT_33", "ATT_34",
          "ATT_35", "ATT_36", "ATT_37"]
 
-# wavelet and frequency info for each band
-band_info = {}
-band_info["theta_0"] = {"freqs":list(np.arange(3,7)),"cycles":3}
-band_info["alpha_0"] = {"freqs":list(np.arange(7,10)),"cycles":5}
-band_info["alpha_1"] = {"freqs":list(np.arange(10,13)),"cycles":7}
-band_info["beta_0"] = {"freqs":list(np.arange(13,22)),"cycles":9}
-band_info["beta_1"] = {"freqs":list(np.arange(22,31)),"cycles":9}
-band_info["gamma_0"] = {"freqs":list(np.arange(31,41)),"cycles":9}
-band_info["gamma_1"] = {"freqs":list(np.arange(41,60)),"cycles":9}
-band_info["gamma_2"] = {"freqs":list(np.arange(60,91)),"cycles":9}
 
 # parameters and setup
 root_dir = "/home/jev/ATT_dat/"
 #root_dir = "/scratch/jeffhanna/ATT_dat/"
 proc_dir = root_dir + "proc/"
 out_dir = root_dir + "lmm/"
-spacing = "ico4"
 conds = ["rest","audio","visual","visselten","zaehlen"]
 z_name = {}
-wavs = ["4000Hz","4000cheby","7000Hz","4000fftf"]
 band = opt.band
 no_Z = True
 if no_Z:
@@ -120,4 +108,4 @@ for mod_idx,mod in enumerate(mods_cond):
     if mod == None:
         continue
     mod.save("{}{}/cond_reg70_lmm_{}{}.pickle".format(out_dir,opt.band,mod_idx,
-                                                    z_name))
+                                                      z_name))

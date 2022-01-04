@@ -39,12 +39,12 @@ top_cnx = 100
 figsize = 2160
 bot_cnx = None
 write_images = False
-conds = ["visual","visselten"]
+conds = ["visual", "visselten"]
 z_name = ""
 no_Z = True
 if no_Z:
     z_name = "no_Z"
-    conds = ["rest","audio","visual","visselten"]
+    conds = ["visual","visselten"]
 
 ROI = "L3969-lh"  # M1 central
 ROI = "L3395-lh"  # M1 superior
@@ -58,21 +58,23 @@ views = {"left":{"view":"lateral","distance":800,"hemi":"lh"},
          "upper":{"view":"dorsal","distance":900}
 }
 
-models = ["null", "cond"]
+models = ["null", "simple", "cond"]
 vars = ["aics", "order", "probs", "winner"] # these will form the main keys of aic_comps dictionary below
 var_base = "C(Block, Treatment('audio'))" # stem of the condition names in statsmodels format
 
-stat_conds = ["RT"] + [var_base+"[T."+cond+"]" for cond in conds[1:]] # convert simple cond names to statsmodels cond names
+stat_conds = ["RT"] + [var_base+"[T."+cond+"]" for cond in conds] # convert simple cond names to statsmodels cond names
 
 if calc_aic:
     # get permutations
     perm_dir = "{}{}/cnx_perm/byresp/".format(proc_dir, band)
     perm_file_list = listdir(perm_dir)
     file_n = len(perm_file_list)
-    perms = np.zeros((node_n, 0))
+    perms = {"simple":np.zeros((node_n, 0)), "cond":np.zeros((node_n, 0))}
     for pf in perm_file_list:
-        this_perms = np.load("{}{}".format(perm_dir, pf))
-        perms = np.hstack((perms, this_perms.reshape(2415, -1)))
+        with open("{}{}".format(perm_dir, pf), "rb") as f:
+            this_perm = pickle.load(f)
+        perms["simple"] = np.hstack((perms["simple"], this_perm["simple"]))
+        perms["cond"] = np.hstack((perms["cond"], this_perm["cond"]))
 
     aics = {mod:np.zeros(node_n) for mod in models}
     aics_pvals = {mod:[None for n in range(node_n)] for mod in models}
@@ -100,7 +102,14 @@ if calc_aic:
 
     # calculate the AIC delta thresholds from the permutations
     null_tile = np.tile(np.expand_dims(aics["null"],1), (1,1024))
-    perm_cond_diff = perms[:,:1024] - null_tile
+    perm_simp_diff = perms["simple"] - null_tile
+    perm_simp_maxima, perm_simp_minima = (np.nanmax(perm_simp_diff, axis=1),
+                                          np.nanmin(perm_simp_diff, axis=1))
+    simp_thresh = np.quantile(perm_simp_minima, threshold/2)
+
+    perm_avg_tile = np.tile(np.nanmean(perms["simple"], axis=1, keepdims=True),
+                            (1, 1024))
+    perm_cond_diff = perms["cond"] - perm_avg_tile
     perm_cond_maxima, perm_cond_minima = (np.nanmax(perm_cond_diff, axis=1),
                                           np.nanmin(perm_cond_diff, axis=1))
     cond_thresh = np.quantile(perm_cond_minima, threshold/2)
@@ -109,6 +118,8 @@ if calc_aic:
     aic_comps["models"] = models
     aic_comps["sig_params"] = np.zeros((node_n,len(stat_conds)))
     aic_comps["confint_params"] = np.zeros((node_n,len(stat_conds),2))
+    aic_comps["simple_sig_params"] = np.zeros((node_n, 1))
+    aic_comps["simple_confint_params"] = np.zeros((node_n, 2))
     aic_comps["predicted"] = aics_predicted
     aic_comps["stat_conds"] = stat_conds
     aic_comps["conds"] = conds
@@ -119,19 +130,26 @@ if calc_aic:
                 continue
         aic_array = np.array([aics[mod][n_idx] for mod in models])
         aic_comps["aics"][n_idx,] = aic_array # store raw AIC values
-        cond_delta = aic_array[1] - aic_array[0]
-        winners = np.array([1,0])
+        simp_delta = aic_array[1] - aic_array[0]
+        cond_delta = aic_array[2] - aic_array[1]
+        winners = np.array([1,0,0])
+        if simp_delta < simp_thresh:
+            winners = np.array([0,1,0])
         if cond_delta < cond_thresh:
-            winners = np.array([0,1])
+            winners = np.array([0,0,1])
 
         aic_comps["winner"][n_idx,] = winners # 0,1 indicator of statistical inference between models: best fit model or not significantly different from best fit are 1, otherwise 0
-        if aic_comps["winner"][n_idx][1] == 1: # if the best model was "cond," than find out which conditions were significantly different than rest
+        if aic_comps["winner"][n_idx][2] == 1: # if the best model was "cond," than find out which conditions were significantly different than rest
             for stat_cond_idx,stat_cond in enumerate(stat_conds):
                 if aics_pvals["cond"][n_idx][stat_cond] < cond_threshold:
                     aic_comps["sig_params"][n_idx][stat_cond_idx] = aics_params["cond"][n_idx][stat_cond]
                     aic_comps["confint_params"][n_idx][stat_cond_idx] = (aics_confint["cond"][n_idx].loc[stat_cond][0], aics_confint["cond"][n_idx].loc[stat_cond][1])
+        elif aic_comps["winner"][n_idx][1] == 1: # simple model wins
+            if aics_pvals["simple"][n_idx]["RT"] < cond_threshold:
+                aic_comps["simple_sig_params"][n_idx] = aics_params["simple"][n_idx]["RT"]
+                aic_comps["simple_confint_params"][n_idx] = (aics_confint["simple"][n_idx].loc["RT"][0],
+                                                             aics_confint["simple"][n_idx].loc["RT"][1])
 
-    breakpoint()
     with open("{}lmm/{}/aic_byresp_perm{}.pickle".format(proc_dir,band,z_name), "wb") as f:
         pickle.dump(aic_comps, f)
 else:
@@ -144,21 +162,14 @@ else:
 triu_inds = np.triu_indices(mat_n, k=1)
 cnx_masks = {mod:np.zeros((mat_n,mat_n)) for mod in models}
 cnx_params = {stat_cond:np.zeros((mat_n,mat_n)) for stat_cond in stat_conds}
-cnx_params["simple_rest"] = np.zeros((mat_n,mat_n))
-cnx_params["simple_task"] = np.zeros((mat_n,mat_n))
+cnx_params["simple_RT"] = np.zeros((mat_n,mat_n))
 
 for n_idx in range(node_n):
     for stat_cond_idx,stat_cond in enumerate(stat_conds):
         if aic_comps["sig_params"][n_idx][stat_cond_idx]:
             cnx_params[stat_cond][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["sig_params"][n_idx][stat_cond_idx]
     if np.array_equal(aic_comps["winner"][n_idx], [0,1,0]):
-        cnx_params["simple_rest"][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["simple_sig_params"][n_idx][0]
-        cnx_params["simple_task"][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["simple_sig_params"][n_idx][1]
-
-# center intercepts around 0
-for cp in ["Intercept", "simple_rest"]:
-    inds = cnx_params[cp] != 0
-    cnx_params[cp][inds] -= 0.5
+        cnx_params["simple_RT"][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["simple_sig_params"][n_idx][0]
 
 if ROI:
     ROI_idx = label_names.index(ROI)
@@ -183,7 +194,7 @@ for stat_cond,cond in zip(stat_conds,conds):
     if write_images:
         make_brain_figure(views, params_brains[-1])
 
-params_brains["simple_task"] = plot_directed_cnx(cnx_params["simple_task"],
+params_brains["simple_RT"] = plot_directed_cnx(cnx_params["simple_RT"],
                                                  labels, parc, alpha_min=None,
                                                  alpha_max=None,
                                                  ldown_title="",
@@ -192,15 +203,6 @@ params_brains["simple_task"] = plot_directed_cnx(cnx_params["simple_task"],
 if write_images:
     make_brain_figure(views, params_brains[-1])
 
-params_brains["simple_rest"] = plot_directed_cnx(cnx_params["simple_rest"],
-                                                 labels, parc, alpha_min=None,
-                                                 alpha_max=None,
-                                                 ldown_title="",
-                                                 top_cnx=top_cnx,
-                                                 figsize=figsize)
-if write_images:
-    if write_images:
-        make_brain_figure(views, params_brains[-1])
 
 # make 4D matrix with RGBA
 mat_rgba = np.zeros((mat_n, mat_n, 4))
@@ -257,4 +259,4 @@ for pan, desc, cond in zip(pans, descs, conds):
     axes[pan].imshow(img)
 plt.suptitle("Estimated connectivity change from resting state",
              fontsize=fontsize)
-plt.savefig("../images/cnx_figure.png")
+plt.savefig("../images/cnx_byresp_figure.png")

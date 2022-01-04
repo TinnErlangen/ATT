@@ -133,7 +133,7 @@ def _dPTE(phase, sfreq, delay=None, epsilon=1e-8):
     histos = []
     for idx in range(phase.shape[0]):
         bn = _hillebrand_binnums(phase[idx,:-delay])
-        bin_edges = np.linspace(-np.pi, np.pi, num=bn)
+        bin_edges = np.linspace(-np.pi, np.pi, num=int(np.round(bn)))
         histos.append(np.histogram(phase[idx,:-delay],
                       bins=bin_edges)[0] / samp_nums + epsilon)
     for (x, y) in combinations(range(phase.shape[0]), 2):

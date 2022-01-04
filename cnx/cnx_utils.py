@@ -181,7 +181,8 @@ def plot_directed_cnx(mat_in,labels,parc,lup_title=None,ldown_title=None,rup_tit
                       subjects_dir="/home/jev/hdd/freesurfer/subjects",
                       alpha_max=None, alpha_min=None, uniform_weight=False,
                       surface="inflated", alpha=1, top_cnx=50, bot_cnx=None,
-                      centre=0, min_alpha=0.1, cmap_name="RdBu"):
+                      centre=0, min_alpha=0.1, cmap_name="RdBu",
+                      background=(0,0,0)):
 
     cmap = cm.get_cmap(cmap_name)
     mat = mat_in.copy()
@@ -208,7 +209,8 @@ def plot_directed_cnx(mat_in,labels,parc,lup_title=None,ldown_title=None,rup_tit
     lingrad = np.linspace(0,1,lineres)
 
     brain = Brain('fsaverage', 'both', surface, alpha=alpha,
-                  subjects_dir=subjects_dir, size=figsize, show=False)
+                  subjects_dir=subjects_dir, size=figsize, show=False,
+                  background=background)
     brain.enable_depth_peeling()
     if lup_title:
         brain.add_text(0, 0.8, lup_title, "lup", font_size=40)
@@ -375,7 +377,7 @@ def plot_rgba_cnx(mat_rgba, labels, parc, lup_title=None,
                   figsize=1280, lineres=100,
                   subjects_dir="/home/jev/hdd/freesurfer/subjects",
                   uniform_weight=False, surface="inflated", brain_alpha=1,
-                  top_cnx=50, bot_cnx=None):
+                  top_cnx=50, bot_cnx=None, background=(0,0,0)):
 
     if top_cnx is not None:
         matflat = mat_rgba[...,3].flatten()
@@ -406,7 +408,8 @@ def plot_rgba_cnx(mat_rgba, labels, parc, lup_title=None,
 
     lingrad = np.linspace(0,1,lineres)
     brain = Brain('fsaverage', 'both', surface, alpha=brain_alpha,
-                  subjects_dir=subjects_dir, size=figsize, show=False)
+                  subjects_dir=subjects_dir, size=figsize, show=False,
+                  background=background)
     if lup_title:
         brain.add_text(0, 0.8, lup_title, "lup", font_size=40)
     if ldown_title:
@@ -483,10 +486,12 @@ def plot_rgba_cnx(mat_rgba, labels, parc, lup_title=None,
 def plot_rgba(vec_rgba, labels, parc, hemi="both", lup_title=None,
               ldown_title=None, rup_title=None, rdown_title=None,
               figsize=1280, subjects_dir="/home/jev/hdd/freesurfer/subjects",
-              uniform_weight=False, surface="inflated", brain_alpha=1.):
+              uniform_weight=False, surface="inflated", brain_alpha=1.,
+              background=(0,0,0)):
 
     brain = Brain('fsaverage', hemi, surface, alpha=brain_alpha,
-                   subjects_dir=subjects_dir, size=figsize, show=False)
+                   subjects_dir=subjects_dir, size=figsize, show=False,
+                   background=background)
     if lup_title:
         brain.add_text(0, 0.8, lup_title, "lup", font_size=40)
     if ldown_title:
@@ -661,7 +666,8 @@ def make_brain_figure(views, brain, cbar=None, vmin=None, vmax=None,
 
 def make_brain_image(views, brain, orient="horizontal", text="",
                      text_loc=None, text_pan=None, fontsize=160,
-                     legend=None, legend_pan=None):
+                     legend=None, legend_pan=None, cbar=None,
+                     vmin=None, vmax=None, cbar_label=""):
     img_list = []
     axis = 1 if orient=="horizontal" else 0
     for k,v in views.items():
@@ -670,7 +676,7 @@ def make_brain_image(views, brain, orient="horizontal", text="",
         img_list.append(scr)
     if text != "":
         img_txt_list = []
-        brain.add_text(0, 0.8, text, text_loc, font_size=fontsize)
+        brain.add_text(0, 0.8, text, text_loc, font_size=fontsize, color=(0,0,0))
         for k,v in views.items():
             brain.show_view(**v)
             scr = brain.screenshot()
@@ -678,11 +684,33 @@ def make_brain_image(views, brain, orient="horizontal", text="",
         img_list[text_pan] = img_txt_list[text_pan]
     if legend:
         legend_list = []
-        brain._renderer.plotter.add_legend(legend, bcolor=(0,0,0))
+        brain._renderer.plotter.add_legend(legend, bcolor=(1,1,1))
         for k,v in views.items():
             brain.show_view(**v)
             scr = brain.screenshot()
             legend_list.append(scr)
         img_list[legend_pan] = legend_list[legend_pan]
     img = np.concatenate(img_list, axis=axis)
+
+    if cbar:
+        norm = Normalize(vmin, vmax)
+        scalmap = cm.ScalarMappable(norm, cbar)
+        if orient == "horizontal":
+            colbar_size = (img_list[-1].shape[0]*4, img_list[-1].shape[1]/6)
+        else:
+            colbar_size = (img_list[-1].shape[0]/6, img_list[-1].shape[1]*4)
+        colbar_size = np.array(colbar_size) / 100
+        fig, ax = plt.subplots(1,1, figsize=colbar_size)
+        colbar = plt.colorbar(scalmap, cax=ax, orientation=orient)
+        ax.tick_params(labelsize=48)
+        if orient == "horizontal":
+            ax.set_xlabel(cbar_label, fontsize=48)
+        else:
+            ax.set_ylabel(cbar_label, fontsize=48)
+        fig.tight_layout()
+        fig.canvas.draw()
+        mat = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
+        mat = mat.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+        img = np.concatenate((img, mat), axis=abs(axis-1))
+
     return img

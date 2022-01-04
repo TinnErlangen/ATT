@@ -30,7 +30,7 @@ cond_threshold = 0.05
 parc = "RegionGrowing_70"
 labels = mne.read_labels_from_annot("fsaverage", parc)
 mat_n = len(labels)
-calc_aic = False
+calc_aic = True
 cmap = "seismic"
 
 # import os
@@ -38,12 +38,10 @@ cmap = "seismic"
 
 views = {"left":{"view":"lateral","distance":500,"hemi":"lh"},
          "right":{"view":"lateral","distance":500,"hemi":"rh"},
-         "upper":{"view":"dorsal","distance":500},
-         "caudal":{"view":"caudal","distance":500}}
+         "upper":{"view":"dorsal","distance":500}}
 parc_ov_views = {"left":{"view":"lateral","distance":500,"hemi":"lh"},
                  "right":{"view":"lateral","distance":500,"hemi":"rh"},
-                 "upper":{"view":"dorsal","distance":500},
-                 "caudal":{"view":"caudal","distance":500}
+                 "upper":{"view":"dorsal","distance":500}
 }
 
 models = ["null","simple","cond"]
@@ -55,8 +53,7 @@ stat_conds = [var_base+"[T."+cond+"]" for cond in conds[1:]]
 
 if calc_aic:
     # get permutations
-    with open("/home/jev/ATT_dat/proc/dics_aic_perm.pickle", "rb") as f:
-        perms = pickle.load(f)
+    perms = np.load("{}{}/dics_byresp_perm_aics.npy".format(proc_dir, band))
     aics = {mod:np.empty(node_n) for mod in models}
     aics_params = {mod:[None for n in range(node_n)] for mod in models}
     aics_confint = {mod:[None for n in range(node_n)] for mod in models}
@@ -64,7 +61,7 @@ if calc_aic:
     for mod in models:
         for n_idx in range(node_n):
             print(n_idx)
-            this_mod = MixedLMResults.load("{}{}/{}_reg70_lmm_{}.pickle".format(proc_dir,band,mod,n_idx))
+            this_mod = MixedLMResults.load("{}{}/{}_reg70_lmm_byresp_{}.pickle".format(proc_dir,band,mod,n_idx))
             aics[mod][n_idx] = this_mod.aic
             aics_pvals[mod][n_idx] = this_mod.pvalues
             aics_params[mod][n_idx] = this_mod.params
@@ -72,14 +69,14 @@ if calc_aic:
 
     # calculate the AIC delta thresholds from the permutations
     null_tile = np.tile(np.expand_dims(aics["null"], 1), (1,1024))
-    perm_simp_diff = perms["simple"] - null_tile
+    perm_simp_diff = perms[...,0] - null_tile
     perm_simp_maxima, perm_simp_minima = (perm_simp_diff.max(axis=1),
                                           perm_simp_diff.min(axis=1))
     simp_thresh = np.quantile(perm_simp_minima, threshold/2)
 
-    perm_avg_tile = np.tile(np.mean(perms["simple"], axis=1, keepdims=True),
+    perm_avg_tile = np.tile(np.mean(perms[...,0], axis=1, keepdims=True),
                             (1, 1024))
-    perm_cond_diff = perms["cond"] - perm_avg_tile
+    perm_cond_diff = perms[...,1] - perm_avg_tile
     perm_cond_maxima, perm_cond_minima = (perm_cond_diff.max(axis=1),
                                           perm_cond_diff.min(axis=1))
     cond_thresh = np.quantile(perm_cond_minima, threshold/2)
@@ -128,7 +125,6 @@ brains = []
 # brains.append(plot_parc_compare("aparc", "RegionGrowing_70"))
 # make_brain_figure(parc_ov_views, brains[-1])
 figsize = 2160
-background = (1,1,1)
 fontsize=150
 img_rat = 8
 pans = ["A", "B", "C", "D"]
@@ -160,7 +156,7 @@ vmax = abs(params).max()
 
 param_n = params_n[:,-1]
 rgba = params_to_rgba(param_n)
-brains.append(plot_rgba(rgba, labels, parc, figsize=figsize, background=background))
+brains.append(plot_rgba(rgba, labels, parc, figsize=figsize))
 img = make_brain_image(views, brains[-1], text="A", text_loc="lup", text_pan=0)
 ax = axes["A"]
 ax.imshow(img)
@@ -169,7 +165,7 @@ ax.imshow(img)
 # audio
 param_n = params_n[:,0]
 rgba = params_to_rgba(param_n)
-brains.append(plot_rgba(rgba, labels, parc, figsize=figsize, background=background))
+brains.append(plot_rgba(rgba, labels, parc, figsize=figsize))
 img = make_brain_image(views, brains[-1], text="B", text_loc="lup", text_pan=0)
 ax = axes["B"]
 ax.imshow(img)
@@ -177,7 +173,7 @@ ax.imshow(img)
 # visual
 param_n = params_n[:,1]
 rgba = params_to_rgba(param_n)
-brains.append(plot_rgba(rgba, labels, parc, figsize=figsize, background=background))
+brains.append(plot_rgba(rgba, labels, parc, figsize=figsize))
 img = make_brain_image(views, brains[-1], text="C", text_loc="lup", text_pan=0)
 ax = axes["C"]
 ax.imshow(img)
@@ -185,7 +181,7 @@ ax.imshow(img)
 # visselten
 param_n = params_n[:,2]
 rgba = params_to_rgba(param_n)
-brains.append(plot_rgba(rgba, labels, parc, figsize=figsize, background=background))
+brains.append(plot_rgba(rgba, labels, parc, figsize=figsize))
 img = make_brain_image(views, brains[-1], text="D", text_loc="lup", text_pan=0)
 ax = axes["D"]
 ax.imshow(img)

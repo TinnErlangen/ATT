@@ -1,6 +1,6 @@
 from os import listdir
 import numpy as np
-from cnx_utils import plot_rgba, make_brain_figure, plot_parc_compare
+from cnx_utils import plot_rgba, make_brain_image, plot_parc_compare
 import mne
 import pickle
 import re
@@ -24,7 +24,8 @@ parc = "RegionGrowing_70"
 labels = mne.read_labels_from_annot("fsaverage",parc=parc,subjects_dir=subjects_dir)
 views = {"left":{"view":"lateral","distance":500,"hemi":"lh"},
          "right":{"view":"lateral","distance":500,"hemi":"rh"},
-         "upper":{"view":"dorsal","distance":500}}
+         "upper":{"view":"dorsal","distance":500},
+         "caudal":{"view":"caudal", "distance":500}}
 
 region_names = [lab.name for lab in labels]
 regions = []
@@ -83,7 +84,11 @@ else:
 data_norm = (data) / (data.max())
 rgbs = cm.get_cmap(cmap)(data_norm)
 rgbs[:,-1] = data_norm
-brain = plot_rgba(rgbs, regions, parc)
-fig = make_brain_figure(views, brain, cbar=cmap, vmin=0, vmax=data.max())
+brain = plot_rgba(rgbs, regions, parc, background=(1,1,1))
+img = make_brain_image(views, brain, cbar=cmap, vmin=0, vmax=data.max(),
+                       orient="horizontal", cbar_label="DICS power (NAI normalised)")
+fig, ax = plt.subplots(1,1, figsize=(38.4, 12.8))
+ax.imshow(img)
+ax.axis("off")
 plt.tight_layout()
-plt.savefig("test.png")
+plt.savefig("../images/dics_rest.png")
