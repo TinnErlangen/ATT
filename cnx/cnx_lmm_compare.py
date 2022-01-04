@@ -55,6 +55,7 @@ def mass_uv_mixedlmm(formula, data, uv_data, group_id):
 # get command line parameters
 parser = argparse.ArgumentParser()
 parser.add_argument('--band', type=str, required=True)
+parser.add_argument('--noZ', action="store_true")
 opt = parser.parse_args()
 
 subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
@@ -74,7 +75,8 @@ out_dir = root_dir + "lmm/"
 conds = ["rest","audio","visual","visselten","zaehlen"]
 z_name = {}
 band = opt.band
-no_Z = False
+no_Z = opt["noZ"]
+z_name = ""
 if no_Z:
     conds = ["rest","audio","visual","visselten"]
     z_name = "no_Z"
