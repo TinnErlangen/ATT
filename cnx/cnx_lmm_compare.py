@@ -20,7 +20,8 @@ group_id is a 1d numpy array with length number of observations
 def mass_uv_mixedlmm(formula, data, uv_data, group_id):
     mods = []
     for d_idx in range(uv_data.shape[1]):
-        print("{} of {}".format(d_idx, uv_data.shape[1]), end="\r")
+        print("{} of {}".format(d_idx, uv_data.shape[1]), end="\r",
+                                flush=True)
         data_temp = data.copy()
         data_temp["Brain"] = uv_data[:,d_idx]
         model = MixedLM.from_formula(formula, data_temp, groups=group_id)
@@ -42,16 +43,19 @@ subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_24", "ATT_25", "ATT_26", "ATT_28", "ATT_31", "ATT_33", "ATT_34",
          "ATT_35", "ATT_36", "ATT_37"]
 
+if isdir("/home/jev"):
+    root_dir = "/home/jev/ATT_dat/"
+elif isdir("/home/jeffhanna/"):
+    root_dir = "/scratch/jeffhanna/ATT_dat/"
+proc_dir = root_dir+"proc/"
 
 # parameters and setup
-root_dir = "/home/jev/ATT_dat/"
-#root_dir = "/scratch/jeffhanna/ATT_dat/"
 proc_dir = root_dir + "proc/"
 out_dir = root_dir + "lmm/"
 conds = ["rest","audio","visual","visselten","zaehlen"]
 z_name = {}
 band = opt.band
-no_Z = True
+no_Z = False
 if no_Z:
     conds = ["rest","audio","visual","visselten"]
     z_name = "no_Z"
