@@ -1,12 +1,30 @@
 import numpy as np
 import mne
-from cnx_utils import load_sparse, phi
 import argparse
 import pickle
 from statsmodels.regression.mixed_linear_model import MixedLM
 import pandas as pd
 import warnings
 warnings.filterwarnings("ignore")
+
+def load_sparse(filename,convert=True,full=False,nump_type="float32"):
+    with open(filename,"rb") as f:
+        result = pickle.load(f)
+    if convert:
+        full_mat = np.zeros(result["mat_sparse"].shape[:-1] + \
+          (result["mat_res"],result["mat_res"])).astype(nump_type)
+        full_mat[...,result["mat_inds"][0],result["mat_inds"][1]] = \
+          result["mat_sparse"]
+        result = full_mat
+    return result
+
+def phi(mat, k=0):
+    if len(mat.shape)>2:
+        triu_inds = np.triu_indices(mat.shape[1],k=k)
+        return mat[...,triu_inds[0],triu_inds[1]]
+    else:
+        triu_inds = np.triu_indices(mat.shape[0],k=k)
+        return mat[triu_inds[0],triu_inds[1]]
 
 '''
 this function fits a model for each possible point of observation (e.g. vertex, voxel)
