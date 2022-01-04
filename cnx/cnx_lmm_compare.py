@@ -39,7 +39,7 @@ group_id is a 1d numpy array with length number of observations
 def mass_uv_mixedlmm(formula, data, uv_data, group_id):
     mods = []
     for d_idx in range(uv_data.shape[1]):
-        print("{} of {}".format(d_idx, uv_data.shape[1]), end="\r",
+        print("{} of {}".format(d_idx, uv_data.shape[1]),
                                 flush=True)
         data_temp = data.copy()
         data_temp["Brain"] = uv_data[:,d_idx]
