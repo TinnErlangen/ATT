@@ -5,6 +5,7 @@ import pickle
 from statsmodels.regression.mixed_linear_model import MixedLM
 import pandas as pd
 import warnings
+from os.path import isdir
 warnings.filterwarnings("ignore")
 
 def load_sparse(filename,convert=True,full=False,nump_type="float32"):
