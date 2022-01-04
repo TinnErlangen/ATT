@@ -75,7 +75,7 @@ out_dir = root_dir + "lmm/"
 conds = ["rest","audio","visual","visselten","zaehlen"]
 z_name = {}
 band = opt.band
-no_Z = opt["noZ"]
+no_Z = opt.noZ
 z_name = ""
 if no_Z:
     conds = ["rest","audio","visual","visselten"]
