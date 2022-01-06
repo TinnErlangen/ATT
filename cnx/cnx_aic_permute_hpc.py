@@ -29,7 +29,7 @@ def phi(mat, k=0):
 def mass_uv_mixedlmm(formula, data, uv_data, group_id, re_formula=None):
     mods = []
     for d_idx in range(uv_data.shape[1]):
-        print("{} of {}".format(d_idx, uv_data.shape[1]), end="\r")
+        print("{} of {}".format(d_idx, uv_data.shape[1]), flush=True)
         data_temp = data.copy()
         data_temp["Brain"] = uv_data[:,d_idx]
         model = MixedLM.from_formula(formula, data_temp, groups=group_id)
@@ -46,6 +46,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--perm', type=int, default=500)
 parser.add_argument('--band', type=str, required=True)
 parser.add_argument('--iter', type=int, default=0)
+parser.add_argument('--noZ', action="store_true")
 opt = parser.parse_args()
 
 subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
@@ -53,25 +54,22 @@ subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
          "ATT_24", "ATT_25", "ATT_26", "ATT_28", "ATT_31", "ATT_33", "ATT_34",
          "ATT_35", "ATT_36", "ATT_37"]
 
-band_info = {}
-band_info["theta_0"] = {"freqs":list(np.arange(3,7)),"cycles":3}
-band_info["alpha_0"] = {"freqs":list(np.arange(7,10)),"cycles":5}
-band_info["alpha_1"] = {"freqs":list(np.arange(10,13)),"cycles":7}
-band_info["beta_0"] = {"freqs":list(np.arange(13,22)),"cycles":9}
-band_info["beta_1"] = {"freqs":list(np.arange(22,31)),"cycles":9}
-band_info["gamma_0"] = {"freqs":list(np.arange(31,41)),"cycles":9}
-band_info["gamma_1"] = {"freqs":list(np.arange(41,60)),"cycles":9}
-band_info["gamma_2"] = {"freqs":list(np.arange(60,91)),"cycles":9}
 
 # parameters and setup
-root_dir = "/home/jev/hdd/ATT_dat/"
 root_dir = "/scratch/jeffhanna/ATT_dat/"
+root_dir = "/home/jev/ATT_dat/"
+# parameters and setup
 proc_dir = root_dir + "proc/"
-spacing = "ico4"
-conds = ["rest","audio","visual","visselten"]
+out_dir = root_dir + "lmm/"
+conds = ["rest","audio","visual","visselten","zaehlen"]
 band = opt.band
-perm_n = opt.perm
+no_Z = opt.noZ
+z_name = ""
+if no_Z:
+    conds = ["rest","audio","visual","visselten"]
+    z_name = "no_Z"
 node_n = 2415
+perm_n = opt.perm
 models = ["null","simple","cond"]
 
 '''
@@ -104,7 +102,7 @@ data = np.array(data)
 group_id = np.array(group_id)
 print("done.")
 
-aics = {mod:np.zeros((node_n,perm_n)) for mod in models}
+aics = {mod:np.zeros((node_n, perm_n)) for mod in models}
 
 if opt.iter == 0:
     formula = "Brain ~ 1"
@@ -141,5 +139,6 @@ for perm_idx in range(perm_n):
         aics["cond"][n_idx,perm_idx] = mods_cond[n_idx].aic
     del mods_cond
 
-with open("{}{}/perm_aic_{}.pickle".format(proc_dir,band,opt.iter), "wb") as f:
+out_name = "{}{}/perm_aic_{}{}.pickle".format(out_dir, band, opt.iter, z_name)
+with open(out_name, "wb") as f:
     pickle.dump(aics,f)
