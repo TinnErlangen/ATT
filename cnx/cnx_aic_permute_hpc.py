@@ -57,7 +57,6 @@ subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
 
 # parameters and setup
 root_dir = "/scratch/jeffhanna/ATT_dat/"
-root_dir = "/home/jev/ATT_dat/"
 # parameters and setup
 proc_dir = root_dir + "proc/"
 out_dir = root_dir + "lmm/"
