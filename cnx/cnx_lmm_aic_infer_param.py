@@ -13,7 +13,7 @@ plt.ion()
 
 '''
 Here we want to load up the results calculated in cnx_lmm_compare, infer
-significance with the AIC, and visualise results
+significance parametrically with the AIC, and visualise results
 '''
 
 proc_dir = "/home/jev/ATT_dat/proc/"

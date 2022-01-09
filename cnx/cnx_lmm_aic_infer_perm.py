@@ -21,7 +21,7 @@ def pval_from_perms(perms, val):
 
 '''
 Here we want to load up the results calculated in cnx_lmm_compare, infer
-significance with the AIC, and visualise results
+significance with the AIC and permutations, and visualise results
 '''
 
 proc_dir = "/home/jev/ATT_dat/proc/"
@@ -35,18 +35,19 @@ parc = "RegionGrowing_70"
 labels = mne.read_labels_from_annot("fsaverage",parc)
 label_names = [label.name for label in labels]
 mat_n = len(labels)
-calc_aic = False
+calc_aic = True
 background = (1,1,1)
-top_cnx = 100
+text_color = (0,0,0)
+top_cnx = 200
 figsize = 2160
 bot_cnx = None
 write_images = False
-conds = ["rest","audio","visual","visselten","zaehlen"]
+conds = ["rest", "audio", "visual", "visselten", "zaehlen"]
 z_name = ""
-no_Z = True
+no_Z = False
 if no_Z:
     z_name = "no_Z"
-    conds = ["rest","audio","visual","visselten"]
+    conds = ["rest", "audio", "visual", "visselten"]
 
 ROI = "L3969-lh"  # M1 central
 ROI = "L3395-lh"  # M1 superior
@@ -55,21 +56,20 @@ ROI = "L3395-lh"  # M1 superior
 # ROI = "L7491_L4557-lh"  # left sup-parietal anterior
 ROI = None
 
-views = {"left":{"view":"lateral","distance":800,"hemi":"lh"},
-         "right":{"view":"lateral","distance":800,"hemi":"rh"},
-         "upper":{"view":"dorsal","distance":900},
-         "caudal":{"view":"caudal","distance":800}
+views = {"left":{"view":"lateral", "distance":800, "hemi":"lh"},
+         "right":{"view":"lateral", "distance":800, "hemi":"rh"},
+         "upper":{"view":"dorsal", "distance":900},
+         "caudal":{"view":"caudal", "distance":800}
 }
 
 models = ["null","simple","cond"]
 vars = ["aics", "order", "probs", "winner"] # these will form the main keys of aic_comps dictionary below
 var_base = "C(Block, Treatment('rest'))" # stem of the condition names in statsmodels format
-
 stat_conds = ["Intercept"] + [var_base+"[T."+cond+"]" for cond in conds[1:]] # convert simple cond names to statsmodels cond names
 
 if calc_aic:
     # get permutations
-    perm_dir = "{}{}/cnx_perm/".format(proc_dir, band)
+    perm_dir = "{}{}/cnx_perm/".format(lmm_dir, band)
     perm_file_list = listdir(perm_dir)
     file_n = len(perm_file_list)
     perms = {"null":np.zeros((node_n, perm_n)), "simple":np.zeros((node_n, 0)),
@@ -90,10 +90,10 @@ if calc_aic:
     for mod in models:
         for n_idx in range(node_n):
             print(n_idx)
-            try:
-                this_mod = MixedLMResults.load("{}{}/{}_reg70_lmm_{}{}.pickle".format(lmm_dir,band,mod,n_idx,z_name))
-            except:
-                continue
+            #try:
+            this_mod = MixedLMResults.load("{}{}/{}_reg70_lmm_{}{}.pickle".format(lmm_dir,band,mod,n_idx,z_name))
+            # except:
+            #     continue
             aics[mod][n_idx] = this_mod.aic
             aics_pvals[mod][n_idx] = this_mod.pvalues
             aics_params[mod][n_idx] = this_mod.params
@@ -126,6 +126,7 @@ if calc_aic:
     aic_comps["confint_params"] = np.zeros((node_n,len(stat_conds),2))
     aic_comps["simple_sig_params"] = np.zeros((node_n, 2))
     aic_comps["simple_confint_params"] = np.zeros((node_n,2,2))
+    aic_comps["null_intercept"] = np.zeros((node_n, 1))
     aic_comps["predicted"] = aics_predicted
     aic_comps["stat_conds"] = stat_conds
     aic_comps["conds"] = conds
@@ -146,7 +147,7 @@ if calc_aic:
 
         aic_comps["winner"][n_idx,] = winners # 0,1 indicator of statistical inference between models: best fit model or not significantly different from best fit are 1, otherwise 0
         if aic_comps["winner"][n_idx][2] == 1: # if the best model was "cond," than find out which conditions were significantly different than rest
-            for stat_cond_idx,stat_cond in enumerate(stat_conds):
+            for stat_cond_idx, stat_cond in enumerate(stat_conds):
                 if aics_pvals["cond"][n_idx][stat_cond] < cond_threshold:
                     aic_comps["sig_params"][n_idx][stat_cond_idx] = aics_params["cond"][n_idx][stat_cond]
                     aic_comps["confint_params"][n_idx][stat_cond_idx] = (aics_confint["cond"][n_idx].loc[stat_cond][0], aics_confint["cond"][n_idx].loc[stat_cond][1])
@@ -156,29 +157,33 @@ if calc_aic:
                 aic_comps["simple_sig_params"][n_idx][0] = aics_params["simple"][n_idx]["Intercept"]
                 aic_comps["simple_confint_params"][n_idx] = (aics_confint["simple"][n_idx].loc["C(Block, Treatment('rest'))[T.task]"][0],
                                                              aics_confint["simple"][n_idx].loc["C(Block, Treatment('rest'))[T.task]"][1])
+        elif aic_comps["winner"][n_idx][0] == 1: # null model wins
+            aic_comps["null_intercept"][n_idx][0] = aics_params["null"][n_idx]["Intercept"]
 
-    with open("{}lmm/{}/aic_perm{}.pickle".format(proc_dir,band,z_name), "wb") as f:
+    with open("{}/{}/aic_perm{}.pickle".format(lmm_dir,band,z_name), "wb") as f:
         pickle.dump(aic_comps, f)
 else:
-    with open("{}lmm/{}/aic_perm{}.pickle".format(proc_dir,band,z_name), "rb") as f:
+    with open("{}/{}/aic_perm{}.pickle".format(lmm_dir, band, z_name), "rb") as f:
         aic_comps = pickle.load(f)
 
 triu_inds = np.triu_indices(mat_n, k=1)
 cnx_masks = {mod:np.zeros((mat_n,mat_n)) for mod in models}
 cnx_params = {stat_cond:np.zeros((mat_n,mat_n)) for stat_cond in stat_conds}
-cnx_params["simple_rest"] = np.zeros((mat_n,mat_n))
-cnx_params["simple_task"] = np.zeros((mat_n,mat_n))
+cnx_params["task"] = np.zeros((mat_n,mat_n))
 
 for n_idx in range(node_n):
-    for stat_cond_idx,stat_cond in enumerate(stat_conds):
-        if aic_comps["sig_params"][n_idx][stat_cond_idx]:
-            cnx_params[stat_cond][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["sig_params"][n_idx][stat_cond_idx]
-    if np.array_equal(aic_comps["winner"][n_idx], [0,1,0]):
-        cnx_params["simple_rest"][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["simple_sig_params"][n_idx][0]
-        cnx_params["simple_task"][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["simple_sig_params"][n_idx][1]
+    if np.array_equal(aic_comps["winner"][n_idx], [0,0,1]):
+        for stat_cond_idx, stat_cond in enumerate(stat_conds):
+            if aic_comps["sig_params"][n_idx][stat_cond_idx]:
+                cnx_params[stat_cond][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["sig_params"][n_idx][stat_cond_idx]
+    elif np.array_equal(aic_comps["winner"][n_idx], [0,1,0]):
+        cnx_params["Intercept"][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["simple_sig_params"][n_idx][0]
+        cnx_params["task"][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["simple_sig_params"][n_idx][1]
+    elif np.array_equal(aic_comps["winner"][n_idx], [1,0,0]):
+        cnx_params["Intercept"][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["simple_sig_params"][n_idx][0]
 
 # center intercepts around 0
-for cp in ["Intercept", "simple_rest"]:
+for cp in ["Intercept"]:
     inds = cnx_params[cp] != 0
     cnx_params[cp][inds] -= 0.5
 
@@ -196,104 +201,102 @@ alpha_max, alpha_min = all_params[-1:], all_params[-top_cnx].min()
 alpha_max, alpha_min = 0.015, 0.001
 alpha_max, alpha_min = None, None
 params_brains = {}
-for stat_cond,cond in zip(stat_conds,conds):
-    params_brains[cond] = plot_directed_cnx(cnx_params[stat_cond],labels,parc,
+for stat_cond, cond in zip(stat_conds, conds):
+    params_brains[cond] = plot_directed_cnx(cnx_params[stat_cond], labels,parc,
                                             alpha_min=alpha_min,
                                             alpha_max=alpha_max,
-                                            ldown_title="", top_cnx=top_cnx,
+                                            ldown_title=cond, top_cnx=top_cnx,
                                             figsize=figsize,
-                                            background=background)
+                                            background=background,
+                                            text_color=text_color)
     if write_images:
         make_brain_figure(views, params_brains[-1])
 
-params_brains["simple_task"] = plot_directed_cnx(cnx_params["simple_task"],
-                                                 labels, parc, alpha_min=None,
-                                                 alpha_max=None,
-                                                 ldown_title="",
-                                                 top_cnx=top_cnx,
-                                                 figsize=figsize,
-                                                 background=background)
+params_brains["task"] = plot_directed_cnx(cnx_params["task"],
+                                          labels, parc, alpha_min=None,
+                                          alpha_max=None,
+                                          ldown_title="task",
+                                          top_cnx=top_cnx,
+                                          figsize=figsize,
+                                          background=background,
+                                          text_color=text_color)
 if write_images:
     make_brain_figure(views, params_brains[-1])
 
-params_brains["simple_rest"] = plot_directed_cnx(cnx_params["simple_rest"],
-                                                 labels, parc, alpha_min=None,
-                                                 alpha_max=None,
-                                                 ldown_title="",
-                                                 top_cnx=top_cnx,
-                                                 figsize=figsize,
-                                                 background=background)
+
 if write_images:
     if write_images:
         make_brain_figure(views, params_brains[-1])
 
-# make 4D matrix with RGBA
-mat_rgba = np.zeros((mat_n, mat_n, 4))
-idx = 0
-for stat_cond in stat_conds[1:]:
-    if "zaehlen" in stat_cond:
-        continue
-    mat_rgba[...,idx] = abs(cnx_params[stat_cond])
-    idx += 1
-rgba_norm = np.linalg.norm(mat_rgba[...,:3],axis=2)
-nonzero = np.where(rgba_norm)
-for x,y in zip(*nonzero):
-    mat_rgba[x,y,:3] /= rgba_norm[x,y]
-mat_rgba[...,-1] = rgba_norm
-params_brains["rainbow"] = plot_rgba_cnx(mat_rgba.copy(), labels, parc,
-                                         ldown_title="",
-                                         top_cnx=top_cnx, figsize=figsize,
-                                         background=background)
-
-if write_images:
-    make_brain_figure(views, params_brains[-1])
-
-fontsize=165
-img_rat = 6
-sup = True
+# # make 4D matrix with RGBA
+# mat_rgba = np.zeros((mat_n, mat_n, 4))
+# idx = 0
+# for stat_cond in stat_conds[1:]:
+#     if "zaehlen" in stat_cond:
+#         continue
+#     mat_rgba[...,idx] = abs(cnx_params[stat_cond])
+#     idx += 1
+# rgba_norm = np.linalg.norm(mat_rgba[...,:3],axis=2)
+# nonzero = np.where(rgba_norm)
+# for x,y in zip(*nonzero):
+#     mat_rgba[x,y,:3] /= rgba_norm[x,y]
+# mat_rgba[...,-1] = rgba_norm
+# params_brains["rainbow"] = plot_rgba_cnx(mat_rgba.copy(), labels, parc,
+#                                          ldown_title="",
+#                                          top_cnx=top_cnx, figsize=figsize,
+#                                          background=background)
+#
+# if write_images:
+#     make_brain_figure(views, params_brains[-1])
 
 
-if sup:
-    pans = ["A", "B", "C"]
-    pads = ["Z", "Y", "X"]
-    descs = ["Auditory task", "Visual task", "Aud. distraction task"]
-    conds = ["audio", "visual", "visselten"]
-    sup_str = "_sup"
-else:
-    pans = ["A", "B"]
-    pads = ["Z", "Y"]
-    descs = ["General task", "Conditions (undirected)"]
-    conds = ["simple_task", "rainbow"]
-    sup_str = ""
 
-mos_str = ""
-pad = True
-for pan, pad in zip(pans, pads):
-    for idx in range(img_rat):
-        mos_str += pan+"\n"
-    if pad:
-        mos_str += pad+"\n"
-
-mos_figsize = np.array((len(views)*figsize-8, len(pans)*figsize+8))/100
-fig, axes = plt.subplot_mosaic(mos_str, figsize=mos_figsize)
-for desc, pan in zip(descs, pans):
-    axes[pan].set_title("{}".format(desc),
-                        fontsize=fontsize)
-    axes[pan].axis("off")
-for pad in pads:
-    axes[pad].axis("off")
-
-legend_props = [["Audio","r"], ["Visual","g"], ["Aud. Distr.","b"]]
-for pan, desc, cond in zip(pans, descs, conds):
-    if cond == "rainbow":
-        img = make_brain_image(views, params_brains[cond], text=pan,
-                               text_loc="lup", text_pan=0, legend=legend_props,
-                               legend_pan=3)
-    else:
-        img = make_brain_image(views, params_brains[cond], text=pan,
-                               text_loc="lup", text_pan=0)
-    axes[pan].imshow(img)
-plt.suptitle("Estimated connectivity change from resting state",
-             fontsize=fontsize)
-#plt.tight_layout()
-plt.savefig("../images/cnx_figure{}.png".format(sup_str))
+## make figure for manuscripts
+# fontsize=165
+# img_rat = 6
+# sup = True
+#
+# if sup:
+#     pans = ["A", "B", "C"]
+#     pads = ["Z", "Y", "X"]
+#     descs = ["Auditory task", "Visual task", "Aud. distraction task"]
+#     conds = ["audio", "visual", "visselten"]
+#     sup_str = "_sup"
+# else:
+#     pans = ["A", "B"]
+#     pads = ["Z", "Y"]
+#     descs = ["General task", "Conditions (undirected)"]
+#     conds = ["simple_task", "rainbow"]
+#     sup_str = ""
+#
+# mos_str = ""
+# pad = True
+# for pan, pad in zip(pans, pads):
+#     for idx in range(img_rat):
+#         mos_str += pan+"\n"
+#     if pad:
+#         mos_str += pad+"\n"
+#
+# mos_figsize = np.array((len(views)*figsize-8, len(pans)*figsize+8))/100
+# fig, axes = plt.subplot_mosaic(mos_str, figsize=mos_figsize)
+# for desc, pan in zip(descs, pans):
+#     axes[pan].set_title("{}".format(desc),
+#                         fontsize=fontsize)
+#     axes[pan].axis("off")
+# for pad in pads:
+#     axes[pad].axis("off")
+#
+# legend_props = [["Audio","r"], ["Visual","g"], ["Aud. Distr.","b"]]
+# for pan, desc, cond in zip(pans, descs, conds):
+#     if cond == "rainbow":
+#         img = make_brain_image(views, params_brains[cond], text=pan,
+#                                text_loc="lup", text_pan=0, legend=legend_props,
+#                                legend_pan=3)
+#     else:
+#         img = make_brain_image(views, params_brains[cond], text=pan,
+#                                text_loc="lup", text_pan=0)
+#     axes[pan].imshow(img)
+# plt.suptitle("Estimated connectivity change from resting state",
+#              fontsize=fontsize)
+# #plt.tight_layout()
+# plt.savefig("../images/cnx_figure{}.png".format(sup_str))

@@ -182,14 +182,18 @@ def plot_directed_cnx(mat_in,labels,parc,lup_title=None,ldown_title=None,rup_tit
                       alpha_max=None, alpha_min=None, uniform_weight=False,
                       surface="inflated", alpha=1, top_cnx=50, bot_cnx=None,
                       centre=0, min_alpha=0.1, cmap_name="RdBu",
-                      background=(0,0,0)):
+                      background=(0,0,0), text_color=(1,1,1)):
 
+    mne.viz.set_3d_backend("pyvista")
     cmap = cm.get_cmap(cmap_name)
     mat = mat_in.copy()
 
     if mat.min() >= centre or mat.max() < centre:
         print("Warning: Values do not seem to match specified centre of {}.".format(centre))
     mat[mat!=0] -= centre
+    if not np.any(mat_in):
+        print("All values 0.")
+        return
 
     if top_cnx is not None:
         matflat = np.abs(mat.flatten())
@@ -207,19 +211,18 @@ def plot_directed_cnx(mat_in,labels,parc,lup_title=None,ldown_title=None,rup_tit
         mat[np.abs(mat)>thresh] = 0
 
     lingrad = np.linspace(0,1,lineres)
-
     brain = Brain('fsaverage', 'both', surface, alpha=alpha,
                   subjects_dir=subjects_dir, size=figsize, show=False,
                   background=background)
     brain.enable_depth_peeling()
     if lup_title:
-        brain.add_text(0, 0.8, lup_title, "lup", font_size=40)
+        brain.add_text(0, 0.8, lup_title, "lup", font_size=40, color=text_color)
     if ldown_title:
-        brain.add_text(0, 0, ldown_title, "ldown", font_size=40)
+        brain.add_text(0, 0, ldown_title, "ldown", font_size=40, color=text_color)
     if rup_title:
-        brain.add_text(0.7, 0.8, rup_title, "rup", font_size=40)
+        brain.add_text(0.7, 0.8, rup_title, "rup", font_size=40, color=text_color)
     if rdown_title:
-        brain.add_text(0.7, 0., rdown_title, "rdown", font_size=40)
+        brain.add_text(0.7, 0., rdown_title, "rdown", font_size=40, color=text_color)
     brain.add_annotation(parc,color="black")
     rrs = np.array([brain.geo[l.hemi].coords[l.center_of_mass()] for l in labels])
 
