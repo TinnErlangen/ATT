@@ -3,6 +3,8 @@ import numpy as np
 from mayavi import mlab
 from surfer import Brain
 
+
+
 proc_dir = "/home/jev/ATT_dat/proc/"
 conds = ["audio", "visual", "visselten"]
 parc = "RegionGrowing_70"

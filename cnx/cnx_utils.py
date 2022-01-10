@@ -12,8 +12,10 @@ import pyvista as pv
 import pandas as pd
 from matplotlib.pyplot import cm
 from matplotlib.colors import Normalize, ListedColormap
+from matplotlib.patches import Rectangle
 import mne
 import csv
+import io
 mne.viz.set_3d_backend("pyvista")
 
 class TriuSparse():
@@ -182,7 +184,7 @@ def plot_directed_cnx(mat_in,labels,parc,lup_title=None,ldown_title=None,rup_tit
                       alpha_max=None, alpha_min=None, uniform_weight=False,
                       surface="inflated", alpha=1, top_cnx=50, bot_cnx=None,
                       centre=0, min_alpha=0.1, cmap_name="RdBu",
-                      background=(0,0,0), text_color=(1,1,1)):
+                      background=(0,0,0), text_color=(1,1,1), min_weight=0.2):
 
     mne.viz.set_3d_backend("pyvista")
     cmap = cm.get_cmap(cmap_name)
@@ -248,11 +250,14 @@ def plot_directed_cnx(mat_in,labels,parc,lup_title=None,ldown_title=None,rup_tit
     area_weight = area_red + area_blue
     area_red = area_red/np.max((area_red.max(),area_blue.max()))
     area_blue = area_blue/np.max((area_red.max(),area_blue.max()))
-    area_weight = area_weight/area_weight.max()
+    # normalise to a range of min_weight to 1
+    area_weight = ((area_weight - area_weight.min()) /
+                   (area_weight.max() - area_weight.min()) * (1 - min_weight) +
+                    min_weight)
 
     lengths = np.linalg.norm(origins-dests, axis=1)
     lengths = np.broadcast_to(lengths,(3,len(lengths))).T
-    midpoints = (origins+dests)/2
+    midpoints = (origins + dests)/2
     midpoint_units = midpoints/np.linalg.norm(midpoints,axis=1,keepdims=True)
     spline_mids = midpoints + midpoint_units*lengths*2
     if uniform_weight:
@@ -261,15 +266,20 @@ def plot_directed_cnx(mat_in,labels,parc,lup_title=None,ldown_title=None,rup_tit
         area_red[area_red>0] = 1
         area_blue[area_blue>0] = 1
     else:
-        alphas = (1-min_alpha)*((np.abs(mat[inds[0],inds[1]])-alpha_min)/(alpha_max-alpha_min)) + min_alpha
-        alphas[alphas<0],alphas[alphas>1] = 0, 1
+        if (mat != 0).sum() == 1: # special case of only one connection
+            alphas = np.array([1])
+        else:
+            alphas = ((1 - min_alpha) *
+                      ((np.abs(mat[inds[0], inds[1]]) - alpha_min) /
+                      (alpha_max - alpha_min)) + min_alpha)
+            alphas[alphas<0], alphas[alphas>1] = 0, 1
 
     for l_idx, l in enumerate(labels):
-        if area_weight[l_idx] == 0:
+        if area_weight[l_idx] == min_weight:
             continue
         brain.add_label(l,color=(area_red[l_idx],0,area_blue[l_idx]),
                         alpha=area_weight[l_idx])
-        point = pv.Sphere(center=rrs[l_idx], radius=area_weight[l_idx]*5+2)
+        point = pv.Sphere(center=rrs[l_idx], radius=area_weight[l_idx]*3+1)
         brain._renderer.plotter.add_mesh(point,
                                          color=(area_red[l_idx],0,
                                          area_blue[l_idx]),
@@ -693,7 +703,16 @@ def make_brain_image(views, brain, orient="horizontal", text="",
             scr = brain.screenshot()
             legend_list.append(scr)
         img_list[legend_pan] = legend_list[legend_pan]
-    img = np.concatenate(img_list, axis=axis)
+    if orient == "square": # only works for 2x2
+        h, w, _ = img_list[0].shape
+        img = np.zeros((h*2, w*2, 3), dtype=np.uint8)
+        #breakpoint()
+        img[:h, :w, ] = img_list[0]
+        img[:h, w:, ] = img_list[1]
+        img[h:, :w, ] = img_list[2]
+        img[h:, w:, ] = img_list[3]
+    else:
+        img = np.concatenate(img_list, axis=axis)
 
     if cbar:
         norm = Normalize(vmin, vmax)
@@ -717,3 +736,105 @@ def make_brain_image(views, brain, orient="horizontal", text="",
         img = np.concatenate((img, mat), axis=abs(axis-1))
 
     return img
+
+def annotated_matrix(mat, labels, annot_labels, ax=None, cmap="seismic",
+                     vmin=None, vmax=None, annot_height=2,
+                     annot_vert_pos="left", annot_hor_pos="bottom",
+                     overlay=False):
+
+    annot_H = annot_height if overlay else annot_height * len(annot_labels)
+
+    N = len(labels)
+    # horizontal annotation stored in a_str
+    a_str = ""
+    for x in range(annot_H):
+        c_str = ""
+        # vertical annotation stored in c_str
+        for y in range(N):
+            c_str += "A"
+        # dead space stored in d_str
+        d_str = ""
+        for y in range(annot_H):
+            d_str += "X"
+        if annot_vert_pos == "left":
+            a_str = a_str + d_str + c_str + "\n"
+        else:
+            a_str = a_str + c_str + d_str + "\n"
+    # vertical annotation and image stored in b_str
+    b_str = ""
+    for x in range(N):
+        c_str = ""
+        # image stored in c_str
+        for y in range(N):
+            c_str += "B"
+        # horizontal annotation stored in d_str
+        d_str = ""
+        for y in range(annot_H):
+            d_str += "C"
+        if annot_vert_pos == "left":
+            b_str = b_str + d_str + c_str + "\n"
+        else:
+            b_str = b_str + c_str + d_str + "\n"
+    if annot_hor_pos == "top":
+        mos_str = a_str + b_str
+    else:
+        mos_str = b_str + a_str
+    mos_str = mos_str[:-1]
+
+    fig, axes = plt.subplot_mosaic(mos_str, figsize=(12.8,12.8))
+    # kill axis labels where not needed
+    axes["X"].axis("off")
+    axes["A"].axis("off")
+    axes["C"].axis("off")
+    # imshow
+    mat += mat.T * -1
+    axes["B"].imshow(mat, cmap=cmap, vmin=vmin, vmax=vmax, aspect="auto")
+    axes["B"].axis("off")
+
+    # annotations
+    axes["A"].axis("off")
+    axes["A"].set_xlim(0, N)
+    axes["A"].set_ylim(0, annot_H)
+    axes["C"].axis("off")
+    axes["C"].set_ylim(N, 0)
+    axes["C"].set_xlim(annot_H, 0)
+
+    # build the annotations
+    if overlay:
+        heights = [annot_H for x in range(len(annot_labels))]
+        row_inds = [0 for x in range(len(annot_labels))]
+        col_inds = [0 for x in range(len(annot_labels))]
+    else:
+        heights = [annot_height for x in range(len(annot_labels))]
+        if annot_vert_pos == "left":
+            col_inds = [x for x in range(annot_H, 0, -annot_height)]
+            col_inds = [x-annot_height for x in col_inds]
+        else:
+            col_inds = [x for x in range(0, annot_H, annot_height)]
+        if annot_hor_pos == "top":
+             row_inds = [x for x in range(0, annot_H, annot_height)]
+        else:
+            row_inds = [x for x in range(annot_H, 0, -annot_height)]
+            row_inds = [x-annot_height for x in row_inds]
+    for idx, al in enumerate(annot_labels):
+        col_key = al["col_key"]
+        labs = al["labels"]
+        for lab_idx, lab in enumerate(labs):
+            col = col_key[lab]
+            rect = Rectangle((lab_idx, row_inds[idx]), 1, heights[idx],
+                             color=col, lw=0)
+            axes["A"].add_patch(rect)
+            rect = Rectangle((col_inds[idx], lab_idx), heights[idx], 1,
+                             color=col, lw=0)
+            axes["C"].add_patch(rect)
+
+    # consolidate as single image in numpy format
+    io_buf = io.BytesIO()
+    fig.savefig(io_buf, format='raw', dpi=100)
+    io_buf.seek(0)
+    img_arr = np.reshape(np.frombuffer(io_buf.getvalue(), dtype=np.uint8),
+                         newshape=(int(fig.bbox.bounds[3]), int(fig.bbox.bounds[2]), -1))
+    io_buf.close()
+
+    plt.close(fig)
+    return img_arr

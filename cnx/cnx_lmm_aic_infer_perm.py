@@ -1,7 +1,7 @@
 from statsmodels.regression.mixed_linear_model import MixedLMResults
 import numpy as np
 from cnx_utils import (plot_undirected_cnx, plot_directed_cnx, plot_rgba_cnx,
-                       load_sparse, make_brain_image)
+                       load_sparse, make_brain_image, annotated_matrix)
 import mne
 import pickle
 import pandas as pd
@@ -10,8 +10,8 @@ from os import listdir
 from mayavi import mlab
 import matplotlib.pyplot as plt
 import matplotlib
+plt.ion()
 #matplotlib.rcParams['figure.dpi'] = 1200
-
 
 def pval_from_perms(perms, val):
     perms.sort()
@@ -35,11 +35,11 @@ parc = "RegionGrowing_70"
 labels = mne.read_labels_from_annot("fsaverage",parc)
 label_names = [label.name for label in labels]
 mat_n = len(labels)
-calc_aic = True
+calc_aic = False
 background = (1,1,1)
 text_color = (0,0,0)
-top_cnx = 200
-figsize = 2160
+top_cnx = 150
+figsize = 1920
 bot_cnx = None
 write_images = False
 conds = ["rest", "audio", "visual", "visselten", "zaehlen"]
@@ -49,18 +49,31 @@ if no_Z:
     z_name = "no_Z"
     conds = ["rest", "audio", "visual", "visselten"]
 
-ROI = "L3969-lh"  # M1 central
-ROI = "L3395-lh"  # M1 superior
+# ROI = "L3969-lh"  # M1 central
+# ROI = "L3395-lh"  # M1 superior
 # ROI = "L8143_L7523-lh" # M1 dorsal
 # ROI = "L4557-lh"  # superior-parietal posterior
 # ROI = "L7491_L4557-lh"  # left sup-parietal anterior
 ROI = None
 
-views = {"left":{"view":"lateral", "distance":800, "hemi":"lh"},
-         "right":{"view":"lateral", "distance":800, "hemi":"rh"},
+views = {"left":{"view":"lateral", "distance":900, "hemi":"lh"},
+         "right":{"view":"lateral", "distance":900, "hemi":"rh"},
          "upper":{"view":"dorsal", "distance":900},
          "caudal":{"view":"caudal", "distance":800}
 }
+
+region_dict = {"occipital":["L2340", "L2685", "L4236_L1933", "L10017",
+                            "L2340_L1933"],
+               "parietal":["L4557", "L4557_L2996", "L5037", "L7491_L4557",
+                           "L7491_L5037", "L8143", "L8729_L7491", "L928"],
+               "temporal":["L5106_L2688", "L5511_L4359", "L7049", "L7097_L4359",
+                           "L7097_L5106", "L7755", "L2235"],
+               "central":["L1154_L1032", "L3395", "L3969", "L7550_L3015",
+                          "L8143_L7523", "L1032"],
+               "frontal":["L1869", "L4118", "L4118_L2817", "L6412",
+                          "L6412_L4118", "L6698_L1154", "L8983_L3015",
+                          "L9249_L6698", "L2817"]
+               }
 
 models = ["null","simple","cond"]
 vars = ["aics", "order", "probs", "winner"] # these will form the main keys of aic_comps dictionary below
@@ -180,12 +193,11 @@ for n_idx in range(node_n):
         cnx_params["Intercept"][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["simple_sig_params"][n_idx][0]
         cnx_params["task"][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["simple_sig_params"][n_idx][1]
     elif np.array_equal(aic_comps["winner"][n_idx], [1,0,0]):
-        cnx_params["Intercept"][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["simple_sig_params"][n_idx][0]
+        cnx_params["Intercept"][triu_inds[0][n_idx],triu_inds[1][n_idx]] = aic_comps["null_intercept"][n_idx][0]
 
 # center intercepts around 0
-for cp in ["Intercept"]:
-    inds = cnx_params[cp] != 0
-    cnx_params[cp][inds] -= 0.5
+inds = cnx_params["Intercept"] != 0
+cnx_params["Intercept"][inds] -= 0.5
 
 if ROI:
     ROI_idx = label_names.index(ROI)
@@ -202,101 +214,81 @@ alpha_max, alpha_min = 0.015, 0.001
 alpha_max, alpha_min = None, None
 params_brains = {}
 for stat_cond, cond in zip(stat_conds, conds):
+
+    ### temp: take this out later
+    if stat_cond != "Intercept":
+        continue
+    ####
+
     params_brains[cond] = plot_directed_cnx(cnx_params[stat_cond], labels,parc,
                                             alpha_min=alpha_min,
                                             alpha_max=alpha_max,
-                                            ldown_title=cond, top_cnx=top_cnx,
+                                            ldown_title="", top_cnx=top_cnx,
                                             figsize=figsize,
                                             background=background,
                                             text_color=text_color)
     if write_images:
         make_brain_figure(views, params_brains[-1])
 
-params_brains["task"] = plot_directed_cnx(cnx_params["task"],
-                                          labels, parc, alpha_min=None,
-                                          alpha_max=None,
-                                          ldown_title="task",
-                                          top_cnx=top_cnx,
-                                          figsize=figsize,
-                                          background=background,
-                                          text_color=text_color)
-if write_images:
-    make_brain_figure(views, params_brains[-1])
-
-
-if write_images:
-    if write_images:
-        make_brain_figure(views, params_brains[-1])
-
-# # make 4D matrix with RGBA
-# mat_rgba = np.zeros((mat_n, mat_n, 4))
-# idx = 0
-# for stat_cond in stat_conds[1:]:
-#     if "zaehlen" in stat_cond:
-#         continue
-#     mat_rgba[...,idx] = abs(cnx_params[stat_cond])
-#     idx += 1
-# rgba_norm = np.linalg.norm(mat_rgba[...,:3],axis=2)
-# nonzero = np.where(rgba_norm)
-# for x,y in zip(*nonzero):
-#     mat_rgba[x,y,:3] /= rgba_norm[x,y]
-# mat_rgba[...,-1] = rgba_norm
-# params_brains["rainbow"] = plot_rgba_cnx(mat_rgba.copy(), labels, parc,
-#                                          ldown_title="",
-#                                          top_cnx=top_cnx, figsize=figsize,
-#                                          background=background)
-#
+# params_brains["task"] = plot_directed_cnx(cnx_params["task"],
+#                                           labels, parc, alpha_min=None,
+#                                           alpha_max=None,
+#                                           ldown_title="",
+#                                           top_cnx=top_cnx,
+#                                           figsize=figsize,
+#                                           background=background,
+#                                           text_color=text_color)
 # if write_images:
 #     make_brain_figure(views, params_brains[-1])
 
+# make figure for manuscripts
+
+# rearrange matrices by region, ant-pos, left/right
 
 
-## make figure for manuscripts
-# fontsize=165
-# img_rat = 6
-# sup = True
-#
-# if sup:
-#     pans = ["A", "B", "C"]
-#     pads = ["Z", "Y", "X"]
-#     descs = ["Auditory task", "Visual task", "Aud. distraction task"]
-#     conds = ["audio", "visual", "visselten"]
-#     sup_str = "_sup"
-# else:
-#     pans = ["A", "B"]
-#     pads = ["Z", "Y"]
-#     descs = ["General task", "Conditions (undirected)"]
-#     conds = ["simple_task", "rainbow"]
-#     sup_str = ""
-#
-# mos_str = ""
-# pad = True
-# for pan, pad in zip(pans, pads):
-#     for idx in range(img_rat):
-#         mos_str += pan+"\n"
-#     if pad:
-#         mos_str += pad+"\n"
-#
-# mos_figsize = np.array((len(views)*figsize-8, len(pans)*figsize+8))/100
+fontsize=165
+img_rat = 12
+
+pans = ["A", "B"]
+pads = ["Z", "Y"]
+
+mos_str = ""
+do_pad = True
+for pan, pad in zip(pans, pads):
+    for idx in range(img_rat):
+        mos_str += pan
+    if do_pad:
+        mos_str += pad
+
+# mos_figsize = np.array([len(pans)*figsize, len(views)*figsize])/100
 # fig, axes = plt.subplot_mosaic(mos_str, figsize=mos_figsize)
-# for desc, pan in zip(descs, pans):
-#     axes[pan].set_title("{}".format(desc),
-#                         fontsize=fontsize)
+# for pan in pans:
+#     # axes[pan].set_title("{}".format(desc),
+#     #                     fontsize=fontsize)
 #     axes[pan].axis("off")
 # for pad in pads:
 #     axes[pad].axis("off")
 #
-# legend_props = [["Audio","r"], ["Visual","g"], ["Aud. Distr.","b"]]
-# for pan, desc, cond in zip(pans, descs, conds):
-#     if cond == "rainbow":
-#         img = make_brain_image(views, params_brains[cond], text=pan,
-#                                text_loc="lup", text_pan=0, legend=legend_props,
-#                                legend_pan=3)
-#     else:
-#         img = make_brain_image(views, params_brains[cond], text=pan,
-#                                text_loc="lup", text_pan=0)
-#     axes[pan].imshow(img)
-# plt.suptitle("Estimated connectivity change from resting state",
-#              fontsize=fontsize)
-# #plt.tight_layout()
-# plt.savefig("../images/cnx_figure{}.png".format(sup_str))
+# # rest cnx by brainview
+# img = make_brain_image(views, params_brains["rest"], text="",
+#                        text_loc="lup", text_pan=0, orient="square")
+# axes["A"].imshow(img)
+#
+
+# cnx conditions by matrix
+m_fig, m_axes = plt.subplots(4, 3, figsize=(17.2, 20))
+annot_labels = [{"col_key":{1:"tab:orange", 2:"tab:pink"},
+                 "labels":np.concatenate((np.ones(35), np.ones(35)*2))},
+                 {"col_key":{1:(.5,.5,.5, 0.2), 2:(.5,.5,.5,0)},
+                  "labels":np.concatenate((np.ones(10), np.ones(60)*2))}]
+img = annotated_matrix(cnx_params["Intercept"], label_names, annot_labels,
+                       annot_vert_pos="left", annot_hor_pos="bottom",
+                       overlay=True, annot_height=6)
+
+#m_axes[0][0].imshow(img)
+m_axes = [ax for axe in m_axes for ax in axe]
+for ma in m_axes:
+    ma.imshow(img)
+    ma.axis("off")
+plt.tight_layout()
+#plt.savefig("../images/cnx_figure{}.png".format(sup_str))
