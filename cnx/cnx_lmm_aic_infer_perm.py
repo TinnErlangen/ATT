@@ -8,10 +8,13 @@ import pandas as pd
 from collections import Counter
 from os import listdir
 from mayavi import mlab
+import io
 import matplotlib.pyplot as plt
 import matplotlib
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import Normalize
+from matplotlib.patches import Rectangle
 plt.ion()
-#matplotlib.rcParams['figure.dpi'] = 1200
 
 def pval_from_perms(perms, val):
     perms.sort()
@@ -243,52 +246,110 @@ for stat_cond, cond in zip(stat_conds, conds):
 
 # make figure for manuscripts
 
-# rearrange matrices by region, ant-pos, left/right
 
+# rest cnx by brainview
+brain_img = make_brain_image(views, params_brains["rest"], text="",
+                       text_loc="lup", text_pan=0, orient="square")
 
-fontsize=165
-img_rat = 12
-
-pans = ["A", "B"]
-pads = ["Z", "Y"]
-
-mos_str = ""
-do_pad = True
-for pan, pad in zip(pans, pads):
-    for idx in range(img_rat):
-        mos_str += pan
-    if do_pad:
-        mos_str += pad
-
-# mos_figsize = np.array([len(pans)*figsize, len(views)*figsize])/100
-# fig, axes = plt.subplot_mosaic(mos_str, figsize=mos_figsize)
-# for pan in pans:
-#     # axes[pan].set_title("{}".format(desc),
-#     #                     fontsize=fontsize)
-#     axes[pan].axis("off")
-# for pad in pads:
-#     axes[pad].axis("off")
-#
-# # rest cnx by brainview
-# img = make_brain_image(views, params_brains["rest"], text="",
-#                        text_loc="lup", text_pan=0, orient="square")
-# axes["A"].imshow(img)
-#
 
 # cnx conditions by matrix
-m_fig, m_axes = plt.subplots(4, 3, figsize=(17.2, 20))
-annot_labels = [{"col_key":{1:"tab:orange", 2:"tab:pink"},
-                 "labels":np.concatenate((np.ones(35), np.ones(35)*2))},
-                 {"col_key":{1:(.5,.5,.5, 0.2), 2:(.5,.5,.5,0)},
-                  "labels":np.concatenate((np.ones(10), np.ones(60)*2))}]
-img = annotated_matrix(cnx_params["Intercept"], label_names, annot_labels,
-                       annot_vert_pos="left", annot_hor_pos="bottom",
-                       overlay=True, annot_height=6)
 
-#m_axes[0][0].imshow(img)
-m_axes = [ax for axe in m_axes for ax in axe]
-for ma in m_axes:
-    ma.imshow(img)
-    ma.axis("off")
+# rearrange by region, hemisphere, ant/pos
+inds = []
+reg_arranged = []
+hemi_arranged = []
+for lobe, lobe_regs in region_dict.items():
+    for hemi in ["lh", "rh"]:
+        these_label_names = ["{}-{}".format(lr, hemi) for lr in lobe_regs]
+        these_labels = [x for x in labels if x.name in these_label_names]
+        # order based on ant-pos location
+        these_ypos = np.array([x.pos[:,1].mean() for x in these_labels])
+        these_label_names = [these_label_names[x] for x in these_ypos.argsort()]
+        inds.extend([label_names.index(x) for x in these_label_names])
+        reg_arranged.extend([lobe for x in these_label_names])
+        hemi_arranged.extend([hemi for x in these_label_names])
+# rearrange matrix indices
+inds = np.array(inds)
+for k in cnx_params.keys():
+    cnx_params[k] += cnx_params[k].T * -1
+    cnx_params[k] = cnx_params[k][inds, :]
+    cnx_params[k] = cnx_params[k][:, inds]
+
+# annotation specifications
+annot_labels = [{"col_key":{"occipital":"tab:orange", "parietal":"gold",
+                            "temporal":"tab:pink", "central":"lime",
+                            "frontal":"tab:cyan"}, "labels":reg_arranged},
+                 {"col_key":{"lh":(.5, .5, .5, 0.35), "rh":(.5, .5, .5, 0.5)},
+                  "labels":hemi_arranged}]
+
+# estimated parameters
+mos_str = """
+          AAAABBBBCCCCX
+          DDDDEEEEFFFFY
+          """
+ax_names = ["A", "B", "C", "D", "E", "F"]
+fx_fig, fx_axes = plt.subplot_mosaic(mos_str, figsize=(30, 18))
+# get universal vmin, vmax
+all_vals = np.concatenate(list(cnx_params.values()))
+vmin, vmax = np.min(all_vals), np.max(all_vals)
+conds = ["Resting state", "Audio task", "Visual task",
+         "Visual w/distraction", "Counting backwards", "General task"]
+stat_conds += ["task"]
+for ax_n, cond, stat_cond in zip(ax_names, conds, stat_conds):
+    img = annotated_matrix(cnx_params[stat_cond], label_names, annot_labels,
+                           annot_vert_pos="left", annot_hor_pos="bottom",
+                           overlay=True, annot_height=6, vmin=vmin, vmax=vmax)
+    fx_axes[ax_n].imshow(img)
+    fx_axes[ax_n].set_title(cond, fontsize=42)
+    fx_axes[ax_n].axis("off")
+
+# colorbar in Y
+disp_vmin, disp_vmax = np.around(vmin, decimals=3), np.around(vmax, decimals=3)
+cbar = plt.colorbar(ScalarMappable(norm=Normalize(vmin=disp_vmin, vmax=disp_vmax),
+                    cmap="seismic"), cax=fx_axes["X"])
+cbar.ax.set_yticks([disp_vmin, 0, disp_vmax])
+cbar.ax.set_yticklabels([disp_vmin, 0, disp_vmax], fontsize=24)
+cbar.ax.text(0.25, 1.01, "A \u2192 B", fontsize=28, transform=cbar.ax.transAxes,
+             weight="bold")
+cbar.ax.text(0.25, -.05, "B \u2192 A", fontsize=28, transform=cbar.ax.transAxes,
+             weight="bold")
+cbar.ax.text(-.2, 0.4, "dPTE - 0.5", rotation="vertical", fontsize=24,
+             transform=cbar.ax.transAxes)
+
+
+# custom legend in Y
+fx_axes["Y"].set_xlim(0, 2)
+fx_axes["Y"].set_ylim(0, 12)
+fx_axes["Y"].axis("off")
+fs = 20
+bar_w, bar_h = 0.6, 0.5
+reg_key = annot_labels[0]["col_key"]
+hemi_key = annot_labels[1]["col_key"]
+y = 11
+for rk, rv in reg_key.items():
+    for hk, hv in hemi_key.items():
+        rect = Rectangle((0.1, y), bar_w, bar_h, color=rv)
+        fx_axes["Y"].add_patch(rect)
+        rect = Rectangle((0.1, y), bar_w, bar_h, color=hv)
+        fx_axes["Y"].add_patch(rect)
+        txt = "{}-{}".format(rk, hk)
+        fx_axes["Y"].text(0.1+bar_w+0.1, y+bar_h/2, txt, fontsize=fs)
+        y -= 1
+
 plt.tight_layout()
+# consolidate as single image in numpy format
+io_buf = io.BytesIO()
+fx_fig.savefig(io_buf, format='raw', dpi=100)
+io_buf.seek(0)
+fx_img = np.reshape(np.frombuffer(io_buf.getvalue(), dtype=np.uint8),
+                     newshape=(int(fx_fig.bbox.bounds[3]),
+                               int(fx_fig.bbox.bounds[2]), -1))
+io_buf.close()
+plt.close(fx_fig)
+
+fig, axes = plt.subplots(1, 2, figsize=(38.4, 21.6))
+axes[0].imshow(brain_img)
+axes[1].imshow(fx_img)
+for ax in axes:
+    ax.axis("off")
 #plt.savefig("../images/cnx_figure{}.png".format(sup_str))

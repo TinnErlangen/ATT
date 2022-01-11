@@ -706,7 +706,6 @@ def make_brain_image(views, brain, orient="horizontal", text="",
     if orient == "square": # only works for 2x2
         h, w, _ = img_list[0].shape
         img = np.zeros((h*2, w*2, 3), dtype=np.uint8)
-        #breakpoint()
         img[:h, :w, ] = img_list[0]
         img[:h, w:, ] = img_list[1]
         img[h:, :w, ] = img_list[2]
@@ -782,22 +781,20 @@ def annotated_matrix(mat, labels, annot_labels, ax=None, cmap="seismic",
     mos_str = mos_str[:-1]
 
     fig, axes = plt.subplot_mosaic(mos_str, figsize=(12.8,12.8))
-    # kill axis labels where not needed
     axes["X"].axis("off")
-    axes["A"].axis("off")
-    axes["C"].axis("off")
     # imshow
-    mat += mat.T * -1
     axes["B"].imshow(mat, cmap=cmap, vmin=vmin, vmax=vmax, aspect="auto")
     axes["B"].axis("off")
 
     # annotations
-    axes["A"].axis("off")
     axes["A"].set_xlim(0, N)
     axes["A"].set_ylim(0, annot_H)
-    axes["C"].axis("off")
+    axes["A"].set_xticks([], labels=[])
+    axes["A"].set_yticks([], labels=[])
     axes["C"].set_ylim(N, 0)
     axes["C"].set_xlim(annot_H, 0)
+    axes["C"].set_xticks([], labels=[])
+    axes["C"].set_yticks([], labels=[])
 
     # build the annotations
     if overlay:
@@ -827,6 +824,8 @@ def annotated_matrix(mat, labels, annot_labels, ax=None, cmap="seismic",
             rect = Rectangle((col_inds[idx], lab_idx), heights[idx], 1,
                              color=col, lw=0)
             axes["C"].add_patch(rect)
+    axes["A"].set_xlabel("B", fontsize=64)
+    axes["C"].set_ylabel("A", fontsize=64, rotation="horizontal", labelpad=30)
 
     # consolidate as single image in numpy format
     io_buf = io.BytesIO()
