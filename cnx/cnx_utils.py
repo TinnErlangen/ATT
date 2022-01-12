@@ -255,11 +255,12 @@ def plot_directed_cnx(mat_in,labels,parc,lup_title=None,ldown_title=None,rup_tit
                    (area_weight.max() - area_weight.min()) * (1 - min_weight) +
                     min_weight)
 
-    lengths = np.linalg.norm(origins-dests, axis=1)
-    lengths = np.broadcast_to(lengths,(3,len(lengths))).T
-    midpoints = (origins + dests)/2
-    midpoint_units = midpoints/np.linalg.norm(midpoints,axis=1,keepdims=True)
-    spline_mids = midpoints + midpoint_units*lengths*2
+    lengths = np.linalg.norm(origins - dests, axis=1)
+    lengths = np.broadcast_to(lengths, (3, len(lengths))).T
+    midpoints = (origins + dests) / 2
+    midpoint_units = midpoints / np.linalg.norm(midpoints,axis=1,keepdims=True)
+    spline_mids = midpoints + midpoint_units * lengths * 1.25
+    spline_mids[:, 2] = np.abs(spline_mids[:, 2]) # no lines running under brain
     if uniform_weight:
         alphas = np.ones(len(inds[0]))*0.8
         area_weight[area_weight>0] = 0.8
@@ -780,7 +781,7 @@ def annotated_matrix(mat, labels, annot_labels, ax=None, cmap="seismic",
         mos_str = b_str + a_str
     mos_str = mos_str[:-1]
 
-    fig, axes = plt.subplot_mosaic(mos_str, figsize=(12.8,12.8))
+    fig, axes = plt.subplot_mosaic(mos_str, figsize=(19.2,19.2))
     axes["X"].axis("off")
     # imshow
     axes["B"].imshow(mat, cmap=cmap, vmin=vmin, vmax=vmax, aspect="auto")
@@ -824,8 +825,8 @@ def annotated_matrix(mat, labels, annot_labels, ax=None, cmap="seismic",
             rect = Rectangle((col_inds[idx], lab_idx), heights[idx], 1,
                              color=col, lw=0)
             axes["C"].add_patch(rect)
-    axes["A"].set_xlabel("B", fontsize=64)
-    axes["C"].set_ylabel("A", fontsize=64, rotation="horizontal", labelpad=30)
+    axes["A"].set_xlabel("Y", fontsize=64)
+    axes["C"].set_ylabel("X", fontsize=64, rotation="horizontal", labelpad=30)
 
     # consolidate as single image in numpy format
     io_buf = io.BytesIO()

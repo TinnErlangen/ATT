@@ -52,18 +52,18 @@ if no_Z:
     z_name = "no_Z"
     conds = ["rest", "audio", "visual", "visselten"]
 
-# ROI = "L3969-lh"  # M1 central
-# ROI = "L3395-lh"  # M1 superior
-# ROI = "L8143_L7523-lh" # M1 dorsal
-# ROI = "L4557-lh"  # superior-parietal posterior
-# ROI = "L7491_L4557-lh"  # left sup-parietal anterior
 ROI = None
 
-views = {"left":{"view":"lateral", "distance":900, "hemi":"lh"},
-         "right":{"view":"lateral", "distance":900, "hemi":"rh"},
-         "upper":{"view":"dorsal", "distance":900},
-         "caudal":{"view":"caudal", "distance":800}
-}
+band_name = {"theta_0":"Theta (4-8Hz)", "alpha_0":"Low alpha (8-10Hz)",
+             "alpha_1":"High alpha (10-13Hz)", "beta_0":"Beta (13-30Hz)",
+             "gamma_0":"Gamma (31-48Hz)"}
+
+views = {"left":{"view":"lateral", "distance":625, "hemi":"lh"},
+         "right":{"view":"lateral", "distance":625, "hemi":"rh"},
+         "upper":{"view":"dorsal", "distance":650,
+                  "focalpoint":(-.77, 3.88, -21.53)},
+         "caudal":{"view":"caudal", "distance":600}
+        }
 
 region_dict = {"occipital":["L2340", "L2685", "L4236_L1933", "L10017",
                             "L2340_L1933"],
@@ -218,10 +218,10 @@ alpha_max, alpha_min = None, None
 params_brains = {}
 for stat_cond, cond in zip(stat_conds, conds):
 
-    ### temp: take this out later
-    if stat_cond != "Intercept":
-        continue
-    ####
+    # ## temp: take this out later
+    # if stat_cond != "Intercept":
+    #     continue
+    # ###
 
     params_brains[cond] = plot_directed_cnx(cnx_params[stat_cond], labels,parc,
                                             alpha_min=alpha_min,
@@ -230,26 +230,22 @@ for stat_cond, cond in zip(stat_conds, conds):
                                             figsize=figsize,
                                             background=background,
                                             text_color=text_color)
-    if write_images:
-        make_brain_figure(views, params_brains[-1])
 
-# params_brains["task"] = plot_directed_cnx(cnx_params["task"],
-#                                           labels, parc, alpha_min=None,
-#                                           alpha_max=None,
-#                                           ldown_title="",
-#                                           top_cnx=top_cnx,
-#                                           figsize=figsize,
-#                                           background=background,
-#                                           text_color=text_color)
-# if write_images:
-#     make_brain_figure(views, params_brains[-1])
+params_brains["task"] = plot_directed_cnx(cnx_params["task"],
+                                          labels, parc, alpha_min=None,
+                                          alpha_max=None,
+                                          ldown_title="",
+                                          top_cnx=top_cnx,
+                                          figsize=figsize,
+                                          background=background,
+                                          text_color=text_color)
 
-# make figure for manuscripts
+###### make figure for manuscripts
 
 
 # rest cnx by brainview
 brain_img = make_brain_image(views, params_brains["rest"], text="",
-                       text_loc="lup", text_pan=0, orient="square")
+                             text_loc="lup", text_pan=0, orient="horizontal")
 
 
 # cnx conditions by matrix
@@ -268,7 +264,9 @@ for lobe, lobe_regs in region_dict.items():
         inds.extend([label_names.index(x) for x in these_label_names])
         reg_arranged.extend([lobe for x in these_label_names])
         hemi_arranged.extend([hemi for x in these_label_names])
-# rearrange matrix indices
+## rearrange matrix indices
+# we still want them in old format for later
+old_cnx_params = {k:v.copy() for k,v in cnx_params.items()}
 inds = np.array(inds)
 for k in cnx_params.keys():
     cnx_params[k] += cnx_params[k].T * -1
@@ -288,7 +286,7 @@ mos_str = """
           DDDDEEEEFFFFY
           """
 ax_names = ["A", "B", "C", "D", "E", "F"]
-fx_fig, fx_axes = plt.subplot_mosaic(mos_str, figsize=(30, 18))
+fx_fig, fx_axes = plt.subplot_mosaic(mos_str, figsize=(76.8, 38.4))
 # get universal vmin, vmax
 all_vals = np.concatenate(list(cnx_params.values()))
 vmin, vmax = np.min(all_vals), np.max(all_vals)
@@ -300,7 +298,7 @@ for ax_n, cond, stat_cond in zip(ax_names, conds, stat_conds):
                            annot_vert_pos="left", annot_hor_pos="bottom",
                            overlay=True, annot_height=6, vmin=vmin, vmax=vmax)
     fx_axes[ax_n].imshow(img)
-    fx_axes[ax_n].set_title(cond, fontsize=42)
+    fx_axes[ax_n].set_title(cond, fontsize=84)
     fx_axes[ax_n].axis("off")
 
 # colorbar in Y
@@ -308,20 +306,19 @@ disp_vmin, disp_vmax = np.around(vmin, decimals=3), np.around(vmax, decimals=3)
 cbar = plt.colorbar(ScalarMappable(norm=Normalize(vmin=disp_vmin, vmax=disp_vmax),
                     cmap="seismic"), cax=fx_axes["X"])
 cbar.ax.set_yticks([disp_vmin, 0, disp_vmax])
-cbar.ax.set_yticklabels([disp_vmin, 0, disp_vmax], fontsize=24)
-cbar.ax.text(0.25, 1.01, "A \u2192 B", fontsize=28, transform=cbar.ax.transAxes,
+cbar.ax.set_yticklabels([disp_vmin, 0, disp_vmax], fontsize=54)
+cbar.ax.text(0.25, 1.01, "X \u2192 Y", fontsize=60, transform=cbar.ax.transAxes,
              weight="bold")
-cbar.ax.text(0.25, -.05, "B \u2192 A", fontsize=28, transform=cbar.ax.transAxes,
+cbar.ax.text(0.25, -.05, "Y \u2192 X", fontsize=60, transform=cbar.ax.transAxes,
              weight="bold")
-cbar.ax.text(-.2, 0.4, "dPTE - 0.5", rotation="vertical", fontsize=24,
+cbar.ax.text(-.2, 0.4, "dPTE - 0.5", rotation="vertical", fontsize=54,
              transform=cbar.ax.transAxes)
-
 
 # custom legend in Y
 fx_axes["Y"].set_xlim(0, 2)
 fx_axes["Y"].set_ylim(0, 12)
 fx_axes["Y"].axis("off")
-fs = 20
+fs = 48
 bar_w, bar_h = 0.6, 0.5
 reg_key = annot_labels[0]["col_key"]
 hemi_key = annot_labels[1]["col_key"]
@@ -347,9 +344,59 @@ fx_img = np.reshape(np.frombuffer(io_buf.getvalue(), dtype=np.uint8),
 io_buf.close()
 plt.close(fx_fig)
 
-fig, axes = plt.subplots(1, 2, figsize=(38.4, 21.6))
+#####
+
+fig, axes = plt.subplots(2, 1, figsize=(21.6, 21.6))
 axes[0].imshow(brain_img)
 axes[1].imshow(fx_img)
+
+axes[0].set_title("A|  Resting state, top {} connections".format(top_cnx),
+                  fontsize=36, pad=60, loc="left")
+axes[1].set_title("B|  Estimated dPTE by condition", pad=60, loc="left",
+                  fontsize=36)
+
+axes[0].set_anchor("W")
+axes[1].set_anchor("W")
+
 for ax in axes:
     ax.axis("off")
-#plt.savefig("../images/cnx_figure{}.png".format(sup_str))
+plt.suptitle("{} directed connectivity".format(band_name[band]),
+             fontsize=42)
+plt.tight_layout()
+
+plt.savefig("../images/cnx_{}.png".format(band))
+plt.savefig("../images/cnx_{}.tif".format(band))
+
+
+### pick out brain views for later construction of fig 2 in fig2_assemble.py
+if band == "theta_0":
+    brain_img = make_brain_image(views, params_brains["task"], text="",
+                                 text_loc="lup", text_pan=0,
+                                 orient="horizontal")
+    np.save("../images/theta0_task.npy", brain_img)
+if band == "alpha_0":
+    brain_img = make_brain_image(views, params_brains["task"], text="",
+                                 text_loc="lup", text_pan=0,
+                                 orient="horizontal")
+    np.save("../images/alpha0_task.npy", brain_img)
+if band == "alpha_1":
+    # average motor response tasks, make a Brain out of them
+    mot_mat = np.stack([old_cnx_params[x] for x in stat_conds[1:4]]).mean(axis=0)
+    motor_brain = plot_directed_cnx(mot_mat, labels, parc, alpha_min=None,
+                                    alpha_max=None, ldown_title="",
+                                    top_cnx=top_cnx, figsize=figsize,
+                                    background=background,
+                                    text_color=text_color)
+    brain_img = make_brain_image(views, motor_brain, text="", text_loc="lup",
+                                 text_pan=0, orient="horizontal")
+    np.save("../images/alpha1_motor.npy", brain_img)
+
+    brain_img = make_brain_image(views, params_brains["task"], text="",
+                                 text_loc="lup", text_pan=0,
+                                 orient="horizontal")
+    np.save("../images/alpha1_task.npy", brain_img)
+
+    brain_img = make_brain_image(views, params_brains["zaehlen"], text="",
+                                 text_loc="lup", text_pan=0,
+                                 orient="horizontal")
+    np.save("../images/alpha1_zaehlen.npy", brain_img)
