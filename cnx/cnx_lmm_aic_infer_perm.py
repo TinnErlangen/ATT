@@ -29,7 +29,7 @@ significance with the AIC and permutations, and visualise results
 
 proc_dir = "/home/jev/ATT_dat/proc/"
 lmm_dir = "/home/jev/ATT_dat/lmm/"
-band = "alpha_1"
+band = "theta_0"
 node_n = 2415
 perm_n = 1024
 threshold = 0.05 # threshold for AIC comparison
@@ -217,12 +217,6 @@ alpha_max, alpha_min = 0.015, 0.001
 alpha_max, alpha_min = None, None
 params_brains = {}
 for stat_cond, cond in zip(stat_conds, conds):
-
-    # ## temp: take this out later
-    # if stat_cond != "Intercept":
-    #     continue
-    # ###
-
     params_brains[cond] = plot_directed_cnx(cnx_params[stat_cond], labels,parc,
                                             alpha_min=alpha_min,
                                             alpha_max=alpha_max,
@@ -240,8 +234,10 @@ params_brains["task"] = plot_directed_cnx(cnx_params["task"],
                                           background=background,
                                           text_color=text_color)
 
-###### make figure for manuscripts
+with open("{}{}/cnx_params_{}.pickle".format(lmm_dir, band, band), "wb") as f:
+    pickle.dump(cnx_params, f)
 
+###### make figure for manuscripts
 
 # rest cnx by brainview
 brain_img = make_brain_image(views, params_brains["rest"], text="",
@@ -400,3 +396,13 @@ if band == "alpha_1":
                                  text_loc="lup", text_pan=0,
                                  orient="horizontal")
     np.save("../images/alpha1_zaehlen.npy", brain_img)
+if band == "beta_0":
+    brain_img = make_brain_image(views, params_brains["rest"], text="",
+                                 text_loc="lup", text_pan=0,
+                                 orient="horizontal")
+    np.save("../images/beta0_rest.npy", brain_img)
+if band == "gamma_0":
+    brain_img = make_brain_image(views, params_brains["rest"], text="",
+                                 text_loc="lup", text_pan=0,
+                                 orient="horizontal")
+    np.save("../images/gamma0_rest.npy", brain_img)
