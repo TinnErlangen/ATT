@@ -698,7 +698,7 @@ def make_brain_image(views, brain, orient="horizontal", text="",
         img_list[text_pan] = img_txt_list[text_pan]
     if legend:
         legend_list = []
-        brain._renderer.plotter.add_legend(legend, bcolor=(1,1,1))
+        leg = brain._renderer.plotter.add_legend(legend, bcolor=(1,1,1))
         for k,v in views.items():
             brain.show_view(**v)
             scr = brain.screenshot()
@@ -735,12 +735,15 @@ def make_brain_image(views, brain, orient="horizontal", text="",
         mat = mat.reshape(fig.canvas.get_width_height()[::-1] + (3,))
         img = np.concatenate((img, mat), axis=abs(axis-1))
 
+    if legend:
+        brain._renderer.plotter.remove_legend()
+
     return img
 
 def annotated_matrix(mat, labels, annot_labels, ax=None, cmap="seismic",
                      vmin=None, vmax=None, annot_height=2,
                      annot_vert_pos="left", annot_hor_pos="bottom",
-                     overlay=False):
+                     overlay=False, cbar=False):
 
     annot_H = annot_height if overlay else annot_height * len(annot_labels)
 
@@ -757,16 +760,26 @@ def annotated_matrix(mat, labels, annot_labels, ax=None, cmap="seismic",
         for y in range(annot_H):
             d_str += "X"
         if annot_vert_pos == "left":
-            a_str = a_str + d_str + c_str + "\n"
+            a_str = a_str + d_str + c_str
         else:
-            a_str = a_str + c_str + d_str + "\n"
+            a_str = a_str + c_str + d_str
+        if cbar:
+            for y in range(annot_H):
+                a_str += "Y"
+        a_str += "\n"
     # vertical annotation and image stored in b_str
     b_str = ""
     for x in range(N):
         c_str = ""
         # image stored in c_str
-        for y in range(N):
-            c_str += "B"
+        if cbar:
+            for y in range(N):
+                c_str += "B"
+            for y in range(annot_H):
+                c_str += "L"
+        else:
+            for y in range(N):
+                c_str += "B"
         # horizontal annotation stored in d_str
         d_str = ""
         for y in range(annot_H):
@@ -780,11 +793,19 @@ def annotated_matrix(mat, labels, annot_labels, ax=None, cmap="seismic",
     else:
         mos_str = b_str + a_str
     mos_str = mos_str[:-1]
-
     fig, axes = plt.subplot_mosaic(mos_str, figsize=(19.2,19.2))
     axes["X"].axis("off")
+    if cbar:
+        axes["Y"].axis("off")
     # imshow
-    axes["B"].imshow(mat, cmap=cmap, vmin=vmin, vmax=vmax, aspect="auto")
+    imshow = axes["B"].imshow(mat, cmap=cmap, vmin=vmin, vmax=vmax, aspect="auto")
+    if cbar:
+        cbar = plt.colorbar(imshow, cax=axes["L"])
+        cbar.ax.set_yticks([])
+        cbar.ax.text(0.25, 1.01, "{:.3f}".format(vmax), fontsize=52,
+                     transform=cbar.ax.transAxes, weight="bold")
+        cbar.ax.text(0.25, -.05, "{:.3f}".format(vmin), fontsize=52,
+                     transform=cbar.ax.transAxes, weight="bold")
     axes["B"].axis("off")
 
     # annotations

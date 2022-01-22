@@ -29,7 +29,7 @@ significance with the AIC and permutations, and visualise results
 
 proc_dir = "/home/jev/ATT_dat/proc/"
 lmm_dir = "/home/jev/ATT_dat/lmm/"
-band = "alpha_1"
+band = "beta_0"
 node_n = 2415
 perm_n = 1024
 threshold = 0.05 # threshold for AIC comparison
@@ -241,8 +241,9 @@ with open("{}{}/cnx_params_{}.pickle".format(lmm_dir, band, band), "wb") as f:
 
 # rest cnx by brainview
 brain_img = make_brain_image(views, params_brains["rest"], text="",
-                             text_loc="lup", text_pan=0, orient="horizontal")
-
+                             text_loc="lup", text_pan=0, orient="horizontal",
+                             legend=[["Source", [1,0,0]], ["Destination", [0,0,1]]],
+                             legend_pan=3)
 
 # cnx conditions by matrix
 
@@ -296,6 +297,27 @@ for ax_n, cond, stat_cond in zip(ax_names, conds, stat_conds):
     fx_axes[ax_n].imshow(img)
     fx_axes[ax_n].set_title(cond, fontsize=84)
     fx_axes[ax_n].axis("off")
+
+## make separate image of resting state for later figure
+fig, ax = plt.subplots(1,1, figsize=(19.2, 19.2))
+img = annotated_matrix(cnx_params["Intercept"], label_names, annot_labels,
+                       annot_vert_pos="left", annot_hor_pos="bottom",
+                       overlay=True, annot_height=6, vmin=vmin, vmax=vmax,
+                       cbar=True)
+ax.imshow(img)
+ax.axis("off")
+
+io_buf = io.BytesIO()
+fig.savefig(io_buf, format='raw', dpi=100)
+io_buf.seek(0)
+rest_img = np.reshape(np.frombuffer(io_buf.getvalue(), dtype=np.uint8),
+                      newshape=(int(fig.bbox.bounds[3]),
+                                int(fig.bbox.bounds[2]), -1))
+io_buf.close()
+#plt.close(fig)
+np.save("../images/{}_rest_annotated.npy".format(band), rest_img)
+##
+
 
 # colorbar in Y
 disp_vmin, disp_vmax = np.around(vmin, decimals=3), np.around(vmax, decimals=3)
@@ -368,12 +390,16 @@ plt.savefig("../images/cnx_{}.tif".format(band))
 if band == "theta_0":
     brain_img = make_brain_image(views, params_brains["task"], text="",
                                  text_loc="lup", text_pan=0,
-                                 orient="horizontal")
+                                 orient="horizontal",
+                                 legend=[["Source", [1,0,0]], ["Destination", [0,0,1]]],
+                                 legend_pan=3)
     np.save("../images/theta0_task.npy", brain_img)
 if band == "alpha_0":
     brain_img = make_brain_image(views, params_brains["task"], text="",
                                  text_loc="lup", text_pan=0,
-                                 orient="horizontal")
+                                 orient="horizontal",
+                                 legend=[["Source", [1,0,0]], ["Destination", [0,0,1]]],
+                                 legend_pan=3)
     np.save("../images/alpha0_task.npy", brain_img)
 if band == "alpha_1":
     # average motor response tasks, make a Brain out of them
@@ -384,25 +410,35 @@ if band == "alpha_1":
                                     background=background,
                                     text_color=text_color)
     brain_img = make_brain_image(views, motor_brain, text="", text_loc="lup",
-                                 text_pan=0, orient="horizontal")
+                                 text_pan=0, orient="horizontal",
+                                 legend=[["Source", [1,0,0]], ["Destination", [0,0,1]]],
+                                 legend_pan=3)
     np.save("../images/alpha1_motor.npy", brain_img)
 
     brain_img = make_brain_image(views, params_brains["task"], text="",
                                  text_loc="lup", text_pan=0,
-                                 orient="horizontal")
+                                 orient="horizontal",
+                                 legend=[["Source", [1,0,0]], ["Destination", [0,0,1]]],
+                                 legend_pan=3)
     np.save("../images/alpha1_task.npy", brain_img)
 
     brain_img = make_brain_image(views, params_brains["zaehlen"], text="",
                                  text_loc="lup", text_pan=0,
-                                 orient="horizontal")
+                                 orient="horizontal",
+                                 legend=[["Source", [1,0,0]], ["Destination", [0,0,1]]],
+                                 legend_pan=3)
     np.save("../images/alpha1_zaehlen.npy", brain_img)
 if band == "beta_0":
     brain_img = make_brain_image(views, params_brains["rest"], text="",
                                  text_loc="lup", text_pan=0,
-                                 orient="horizontal")
+                                 orient="horizontal",
+                                 legend=[["Source", [1,0,0]], ["Destination", [0,0,1]]],
+                                 legend_pan=3)
     np.save("../images/beta0_rest.npy", brain_img)
 if band == "gamma_0":
     brain_img = make_brain_image(views, params_brains["rest"], text="",
                                  text_loc="lup", text_pan=0,
-                                 orient="horizontal")
+                                 orient="horizontal",
+                                 legend=[["Source", [1,0,0]], ["Destination", [0,0,1]]],
+                                 legend_pan=3)
     np.save("../images/gamma0_rest.npy", brain_img)

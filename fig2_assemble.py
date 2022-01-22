@@ -58,7 +58,7 @@ axes["E"].text(txt_w, txt_h, "E| High alpha counting backwards", transform=axes[
 for ax in axes.values():
     ax.axis("off")
 
-plt.suptitle("Main patterns of difference from resting state", fontsize=34)
+plt.suptitle("Main patterns of change from resting state", fontsize=34)
 plt.tight_layout()
 
 plt.savefig("../images/fig2.png")
@@ -66,20 +66,28 @@ plt.savefig("../images/fig2.tif")
 
 # supplemental 1
 
-fig, axes = plt.subplots(2, 1, figsize=(20, 12))
+mos_str = """
+          AAAAY
+          BBBBZ
+          """
+fig, axes = plt.subplot_mosaic(mos_str, figsize=(27, 21.6))
 
 img = np.load("../images/beta0_rest.npy")
-axes[0].imshow(img)
-axes[0].text(txt_w, txt_h, "A| Beta (13-30Hz)", transform=axes[0].transAxes,
-             fontsize=fs)
+axes["A"].imshow(img)
+axes["A"].text(txt_w, txt_h, "A| Beta (13-30Hz)", transform=axes["A"].transAxes,
+               fontsize=fs)
+img = np.load("../images/beta_0_rest_annotated.npy")
+axes["Y"].imshow(img)
 
 img = np.load("../images/gamma0_rest.npy")
-axes[1].imshow(img)
-axes[1].text(txt_w, txt_h, "B| Gamma (31-48Hz)", transform=axes[1].transAxes,
+axes["B"].imshow(img)
+axes["B"].text(txt_w, txt_h, "B| Gamma (31-48Hz)", transform=axes["B"].transAxes,
              fontsize=fs)
+img = np.load("../images/gamma_0_rest_annotated.npy")
+axes["Z"].imshow(img)
 
-for ax in axes:
-    ax.axis("off")
+for k in axes.keys():
+    axes[k].axis("off")
 plt.suptitle("High band resting state directed connectivity", fontsize=34)
 plt.tight_layout()
 
