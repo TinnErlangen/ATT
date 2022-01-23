@@ -29,7 +29,7 @@ significance with the AIC and permutations, and visualise results
 
 proc_dir = "/home/jev/ATT_dat/proc/"
 lmm_dir = "/home/jev/ATT_dat/lmm/"
-band = "beta_0"
+band = "theta_0"
 node_n = 2415
 perm_n = 1024
 threshold = 0.05 # threshold for AIC comparison
