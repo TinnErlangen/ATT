@@ -23,8 +23,8 @@ def load_sparse(filename,convert=True,full=False,nump_type="float32"):
         result = full_mat
     return result
 
-def dpte_bar(val_dict, xlim=(0.488, 0.512), bar_h=0.2, colors=None,
-             task="Task", task_name={"Task":"Task"},
+def dpte_bar(val_dict, xlim=(-0.2, 0.2), bar_h=0.2, colors=None,
+             task="task", task_name={"task":"Task"},
              figsize=(19.2, 19.2), leg_loc="upper right"):
     fig, ax = plt.subplots(1, figsize=figsize)
     C = len(val_dict)
@@ -34,101 +34,108 @@ def dpte_bar(val_dict, xlim=(0.488, 0.512), bar_h=0.2, colors=None,
     if C == 1:
         yticks = [.5]
     ax.set_yticks([])
-    xticks = np.arange(xlim[0], xlim[1], 0.005)
+    xticks = np.linspace(xlim[0], xlim[1]+0.0001, 10)
     ax.set_xticks(xticks)
-    ax.set_xticklabels(xticks, fontsize=50)
-    ax.set_xlabel("estimated regional mean dPTE", fontsize=50)
+    ax.set_xticklabels(["{:.1f}".format(xt) for xt in xticks], fontsize=50)
+    ax.set_xlabel("estimated regional total dPTE-0.5", fontsize=50)
 
     task_color = "tab:orange"
     fs = 52
 
     for pure_idx, (k, v) in enumerate(val_dict.items()):
         idx = C - pure_idx - 1
-        rest_CIs = v["Rest_CIs"]
+        rest_CIs = v["Rest_{}_CIs".format(task)]
         rect = Rectangle((rest_CIs[0], yticks[idx]-bar_h/2),
                           rest_CIs[1]-rest_CIs[0], bar_h, color="gray",
                           alpha=0.3)
         ax.add_patch(rect)
-        ax.vlines(v["Rest"], yticks[idx]-bar_h/2, yticks[idx]+bar_h/2,
+        ax.vlines(v["Rest_{}".format(task)],
+                  yticks[idx]-bar_h/2, yticks[idx]+bar_h/2,
                   color="gray", alpha=0.9)
 
-        task_CIs = v["{}_CIs".format(task)] + v["Rest"]
+        task_CIs = (v["{}_CIs".format(task)] + v["Rest_{}".format(task)])
+
         rect = Rectangle((task_CIs[0], yticks[idx]-bar_h/2),
                           task_CIs[1]-task_CIs[0], bar_h, color=task_color,
                           alpha=0.3)
         ax.add_patch(rect)
-        ax.vlines(v[task] + v["Rest"], yticks[idx]-bar_h/2,
+        ax.vlines(v[task] + v["Rest_{}".format(task)], yticks[idx]-bar_h/2,
                   yticks[idx]+bar_h/2, color=task_color, alpha=0.9)
 
-        if max((v[task] + v["Rest"]), v["Rest"]) > 0.5:
+        if max((v[task] + v["Rest_{}".format(task)]),
+                v["Rest_{}".format(task)]) > 0.:
             ax.text(xlim[0] + 0.0005, yticks[idx], k,
                     va="center", size=fs)
         else:
             ax.text(xlim[1] - 0.0005, yticks[idx], k,
                     va="center", ha="right", size=fs)
 
-    ax.vlines(0.5, 0, C, color="black")
+    ax.vlines(0., 0, C, color="black")
     leg_lines = [plt.Line2D([0], [0], color="gray", lw=10),
                  plt.Line2D([0], [0], color=task_color, lw=10)]
     ax.legend(leg_lines, ["Rest", task_name[task]], fontsize=fs, loc=leg_loc)
 
     return fig, ax
 
-def dpte_bar_multi(val_dict, conds, cond_names, xlim=(0.488, 0.512),
+def dpte_bar_multi(val_dict, conds, cond_names, xlim=(-0.3, 0.3),
                    bar_h=0.1, colors=None, figsize=(19.2, 19.2),
                    leg_loc="upper right"):
+    conds = conds.copy()
+    conds.reverse()
     fig, ax = plt.subplots(1, figsize=figsize)
     C = len(val_dict)
     ax.set_ylim(0, C)
     ax.set_xlim(xlim)
     yticks = [0.25, 1.5][:C]
     ax.set_yticks([])
-    xticks = np.arange(xlim[0], xlim[1], 0.005)
+    xticks = np.linspace(xlim[0], xlim[1]+0.0001, 6)
     ax.set_xticks(xticks)
-    ax.set_xticklabels(xticks, fontsize=50)
-    ax.set_xlabel("estimated regional mean dPTE", fontsize=50)
+    ax.set_xticklabels(["{:.2f}".format(xt) for xt in xticks], fontsize=50)
+    ax.set_xlabel("estimated regional total dPTE-0.5", fontsize=50)
 
-    rest_bar_h = bar_h * len(conds)
     colors = ["tab:green", "tab:purple", "tab:pink", "tab:cyan"]
-    fs = 52
+    fs = 40
 
     for pure_idx, (k, v) in enumerate(val_dict.items()):
         idx = C - pure_idx - 1
-        rest_CIs = v["Rest_CIs"]
-        rect = Rectangle((rest_CIs[0], yticks[idx]-bar_h/2),
-                          rest_CIs[1]-rest_CIs[0], rest_bar_h, color="gray",
-                          alpha=0.3)
-        ax.add_patch(rect)
-        ax.vlines(v["Rest"], yticks[idx]-bar_h/2,
-                  yticks[idx]-bar_h/2 + rest_bar_h, color="gray", alpha=0.9)
 
         task_dptes = []
         for m_idx, (cond, color) in enumerate(zip(conds, colors)):
-            task_CIs = v["{}_CIs".format(cond)] + v["Rest"]
+            rest_CIs = v["Rest_{}_CIs".format(cond)]
+            rect = Rectangle((rest_CIs[0], yticks[idx]-bar_h/2+bar_h*m_idx),
+                              rest_CIs[1]-rest_CIs[0], bar_h, color="gray",
+                              alpha=0.3)
+            ax.add_patch(rect)
+            ax.vlines(v["Rest_{}".format(cond)],
+                      yticks[idx]-bar_h/2+bar_h*m_idx,
+                      yticks[idx]-bar_h/2+bar_h*m_idx+bar_h,
+                      color="gray", alpha=0.9)
+
+            task_CIs = (v["{}_CIs".format(cond)] + v["Rest_{}".format(cond)])[0]
             rect = Rectangle((task_CIs[0], yticks[idx]-bar_h/2+bar_h*m_idx),
                               task_CIs[1]-task_CIs[0], bar_h, color=color,
                               alpha=0.3)
             ax.add_patch(rect)
-            ax.vlines(v[cond] + v["Rest"],
+            ax.vlines(v[cond] + v["Rest_{}".format(cond)],
                       yticks[idx]-bar_h/2+bar_h*m_idx,
                       yticks[idx]-bar_h/2+bar_h*m_idx+bar_h, color=color,
                       alpha=0.9)
-            task_dptes.append(v[cond] + v["Rest"])
+            task_dptes.append(v[cond] + v["Rest_{}".format(cond)])
 
         max_amp = task_dptes[np.abs(task_dptes).argmax()]
 
-        if max(max_amp, v["Rest"]) > 0.5:
-            ax.text(xlim[0] + 0.0005, yticks[idx]-bar_h/2+rest_bar_h/2, k,
-                    fontsize=fs, va="center")
+        if max(max_amp, v["Rest_{}".format(cond)]) > 0.:
+            ax.text(xlim[0] + 0.0005, yticks[idx]+bar_h*len(conds)/2-bar_h/2,
+                    k, fontsize=fs, va="center")
         else:
-            ax.text(xlim[1] - 0.0005, yticks[idx]-bar_h/2+rest_bar_h/2, k,
-                    fontsize=fs, va="center", ha="right")
+            ax.text(xlim[1] - 0.0005, yticks[idx]+bar_h*len(conds)/2-bar_h/2,
+                    k, fontsize=fs, va="center", ha="right")
 
     leg_lines = [plt.Line2D([0], [0], color="gray", lw=10)]
     colors.reverse()
     leg_lines += [plt.Line2D([0], [0], color=c, lw=10) for c in colors]
     ax.legend(leg_lines, ["Rest"] + cond_names, fontsize=fs, loc=leg_loc)
-    ax.vlines(0.5, 0, C, color="black")
+    ax.vlines(0., 0, C, color="black")
 
     return fig, ax
 
@@ -146,11 +153,14 @@ label_names = [label.name for label in labels]
 mat_n = len(labels)
 
 paths = {}
-paths["theta_0"] = {"LH motor":{"from":["L3395-lh"], "to":["all"]},
+paths["theta_0_t"] = {"LH motor":{"from":["L3395-lh"], "to":["all"]},
                     "RH frontal pole":{"from":["L1869-rh"], "to":["all"]}
-                   }
-paths["alpha_0"] = {"LH Hub":{"from":["L2340-lh"], "to":["all"]},
-                    "Other occipital":{"from":["L4236_L1933-lh",
+                     }
+paths["theta_0_c"] = {"RH dorsal parietal":{"from":["L4557_L2996-rh"],
+                      "to":["all"]}
+                     }
+paths["alpha_0_t"] = {"LH hub":{"from":["L2340-lh"], "to":["all"]},
+                      "Other occipital":{"from":["L4236_L1933-lh",
                                                "L4236_L1933-rh",
                                                "L2340_L1933-lh",
                                                "L2340_L1933-rh",
@@ -161,6 +171,9 @@ paths["alpha_0"] = {"LH Hub":{"from":["L2340-lh"], "to":["all"]},
                                                "to":["all"]
                                               }
                    }
+paths["alpha_0_c"] = {"LH mid-temporal":{"from":["L7097_L4359-lh"], "to":["all"]},
+                      "RH V1":{"from":["L2340_L1933-rh"], "to":["all"]}
+                      }
 paths["alpha_1_t"] = {"LH parietal":{"from":["L4557-lh"], "to":["all"]}}
 paths["alpha_1_m"] = {"LH parietal":{"from":["L4557-lh"], "to":["all"]},
                       "LH motor":{"from":["L3395-lh", "L8143_L7523-lh",
@@ -197,6 +210,8 @@ proc_dir = root_dir+"proc/"
 proc_dir = root_dir + "proc/"
 lmm_dir = root_dir + "lmm/"
 conds = ["rest", "audio", "visual", "visselten", "zaehlen"]
+var_base = "C(Block, Treatment('rest'))" # stem of the condition names in statsmodels format
+stat_conds = ["Intercept"] + [var_base+"[T."+cond+"]" for cond in conds[1:]] # convert simple cond names to statsmodels cond names
 band = opt.band
 
 with open("{}{}/cnx_params_{}.pickle".format(lmm_dir, band, band), "rb") as f:
@@ -218,6 +233,8 @@ for sub_idx,sub in enumerate(subjs):
             c = cond if cond == "rest" else "task"
             dm_simple = dm_simple.append({"Subj":sub, "Block":c}, ignore_index=True)
             dm_cond = dm_cond.append({"Subj":sub, "Block":cond}, ignore_index=True)
+            data_temp[epo_idx, data_temp[epo_idx]!=0] -= 0.5
+            data_temp[epo_idx, ] += data_temp[epo_idx, ].T * -1
             data.append(data_temp[epo_idx,])
             group_id.append(sub_idx)
 data = np.array(data)
@@ -225,11 +242,8 @@ group_id = np.array(group_id)
 
 formula = "Brain ~ C(Block, Treatment('rest'))"
 mod_ests = {}
-if path in ["theta_0", "alpha_0", "alpha_1_t"]:
+if path in ["theta_0_t", "alpha_0_t", "alpha_1_t"]:
     these_data = data.copy()
-    triu_inds, tril_inds = np.triu_indices(mat_n, k=1), np.tril_indices(mat_n, k=-1)
-    these_data[:, tril_inds[0], tril_inds[1]] = \
-      (these_data[:, triu_inds[0], triu_inds[1]] - 0.5) * -1 + 0.5
     df = dm_simple.copy()
     this_path = paths[path]
     these_data *= cnx_params["task"].astype(bool) # mask
@@ -240,14 +254,13 @@ if path in ["theta_0", "alpha_0", "alpha_1_t"]:
         else:
             from_inds = np.array([label_names.index(x) for x in v["from"]])
         from_mat = these_data[:, from_inds,]
-        from_mat = np.nanmean(from_mat, axis=1)
-
         if v["to"][0] == "all":
             to_inds = np.arange(mat_n)
         else:
             to_inds = np.array([label_names.index(x) for x in v["to"]])
-        to_mat = from_mat[:, to_inds]
-        quant = np.nanmean(to_mat, axis=1)
+        to_mat = from_mat[:, :, to_inds]
+
+        quant = np.nansum(to_mat.reshape(len(to_mat), -1), axis=1)
 
         df["Brain"] = quant
         model = MixedLM.from_formula(formula, df, groups=group_id)
@@ -255,79 +268,82 @@ if path in ["theta_0", "alpha_0", "alpha_1_t"]:
         print(mod_fit.summary())
         stat_cond = "C(Block, Treatment('rest'))[T.task]"
         CIs = mod_fit.conf_int()
-        mod_ests[k] = {"Rest":mod_fit.params["Intercept"],
-                       "Task":mod_fit.params[stat_cond],
-                       "Rest_CIs":np.array([CIs[0]["Intercept"],
+        mod_ests[k] = {"Rest_task":mod_fit.params["Intercept"],
+                       "task":mod_fit.params[stat_cond],
+                       "Rest_task_CIs":np.array([CIs[0]["Intercept"],
                                             CIs[1]["Intercept"]]),
-                       "Task_CIs":np.array([CIs[0][stat_cond],
+                       "task_CIs":np.array([CIs[0][stat_cond],
                                             CIs[1][stat_cond]])
                       }
-    fig, ax = dpte_bar(mod_ests)
+    if path == "theta_0_t":
+        xlim = [-0.2, 0.2]
+    elif path == "alpha_0_t":
+        xlim = [-0.5, 2]
+    elif path == "alpha_1_t":
+        xlim = [-0.5, 0.5]
+    fig, ax = dpte_bar(mod_ests, xlim=xlim)
 else:
-    these_data = data.copy()
-    triu_inds, tril_inds = np.triu_indices(mat_n, k=1), np.tril_indices(mat_n, k=-1)
-    these_data[:, tril_inds[0], tril_inds[1]] = \
-      (these_data[:, triu_inds[0], triu_inds[1]] - 0.5) * -1 + 0.5
-    df = dm_cond.copy()
     this_path = paths[path]
-    # masking
-    if path in ["alpha_1_m", "alpha_1_LA1", "alpha_1_LV1", "alpha_1_RA1",
-                "alpha_1_RV1"]:
-        mask_names = ["C(Block, Treatment('rest'))[T.audio]",
-                      "C(Block, Treatment('rest'))[T.visual]",
-                      "C(Block, Treatment('rest'))[T.visselten]",
-                      "C(Block, Treatment('rest'))[T.zaehlen]"]
-        mask = sum([cnx_params[mn].astype(bool) for mn in mask_names]).astype(bool)
-    elif path == "alpha_1_z":
-        mask = cnx_params["C(Block, Treatment('rest'))[T.zaehlen]"].astype(bool)
-    these_data *= mask
-    these_data[these_data==0] = np.nan # so we can use nanmean to ignore 0s
     for k, v in this_path.items():
-        if v["from"][0] == "all":
-            from_inds = np.arange(mat_n)
-        else:
-            from_inds = np.array([label_names.index(x) for x in v["from"]])
-        from_mat = these_data[:, from_inds,]
-        from_mat = np.nanmean(from_mat, axis=1)
+        mod_ests[k] = {}
+        for cond, stat_cond in zip(conds[1:], stat_conds[1:]):
+            df = dm_cond.copy()
+            groups = group_id.copy()
+            blocks = df["Block"].values
+            these_data = data.copy()
+            valid_inds = (blocks == "rest") | (blocks == cond)
+            these_data = these_data[valid_inds,]
+            groups = groups[valid_inds]
+            df = df[valid_inds]
 
-        if v["to"][0] == "all":
-            to_inds = np.arange(mat_n)
-        else:
-            to_inds = np.array([label_names.index(x) for x in v["to"]])
-        to_mat = from_mat[:, to_inds]
-        quant = np.nanmean(to_mat, axis=1)
+            # masking
+            these_data *= cnx_params[stat_cond].astype(bool) # mask
+            these_data[these_data==0] = np.nan # so we can use nanmean to ignore 0s
 
-        df["Brain"] = quant
-        model = MixedLM.from_formula(formula, df, groups=group_id)
-        mod_fit = model.fit(reml=False)
-        print(mod_fit.summary())
-        CIs = mod_fit.conf_int()
-        mod_ests[k] = {"Rest":mod_fit.params["Intercept"],
-                       "Rest_CIs":np.array([CIs[0]["Intercept"],
-                                            CIs[1]["Intercept"]]),
+            if v["from"][0] == "all":
+                from_inds = np.arange(mat_n)
+            else:
+                from_inds = np.array([label_names.index(x) for x in v["from"]])
+            from_mat = these_data[:, from_inds,]
+            if v["to"][0] == "all":
+                to_inds = np.arange(mat_n)
+            else:
+                to_inds = np.array([label_names.index(x) for x in v["to"]])
+            to_mat = from_mat[:, :, to_inds]
 
-                       "audio":mod_fit.params["C(Block, Treatment('rest'))[T.audio]"],
-                       "audio_CIs":np.array([CIs[0]["C(Block, Treatment('rest'))[T.audio]"],
-                                            CIs[1]["C(Block, Treatment('rest'))[T.audio]"]]),
+            quant = np.nansum(to_mat.reshape(len(to_mat), -1), axis=1)
+            df["Brain"] = quant
+            model = MixedLM.from_formula(formula, df, groups=groups)
+            if path == "theta_0_c":
+                reml = False
+            else:
+                reml = True
+            mod_fit = model.fit(reml=reml)
+            print(mod_fit.summary())
+            CIs = mod_fit.conf_int()
+            mod_ests[k]["Rest_{}".format(cond)] = mod_fit.params["Intercept"]
+            mod_ests[k]["Rest_{}_CIs".format(cond)] = np.array([CIs[0]["Intercept"],
+                                                                CIs[1]["Intercept"]])
+            mod_ests[k][cond] = mod_fit.params[stat_cond]
+            mod_ests[k]["{}_CIs".format(cond)] = np.array([CIs[0][stat_cond],
+                                                           CIs[1][stat_cond]]),
 
-                       "visual":mod_fit.params["C(Block, Treatment('rest'))[T.visual]"],
-                       "visual_CIs":np.array([CIs[0]["C(Block, Treatment('rest'))[T.visual]"],
-                                            CIs[1]["C(Block, Treatment('rest'))[T.visual]"]]),
-
-                       "visselten":mod_fit.params["C(Block, Treatment('rest'))[T.visselten]"],
-                       "visselten_CIs":np.array([CIs[0]["C(Block, Treatment('rest'))[T.visselten]"],
-                                                 CIs[1]["C(Block, Treatment('rest'))[T.visselten]"]]),
-
-                       "zaehlen":mod_fit.params["C(Block, Treatment('rest'))[T.zaehlen]"],
-                       "zaehlen_CIs":np.array([CIs[0]["C(Block, Treatment('rest'))[T.zaehlen]"],
-                                           CIs[1]["C(Block, Treatment('rest'))[T.zaehlen]"]]),
-                      }
-        conds = ["zaehlen", "visselten", "visual", "audio"]
-        cond_names = ["Audio", "Visual", "Vis. w/distr.", "Counting"]
+    conds = ["audio", "visual", "visselten", "zaehlen"]
+    cond_names = ["Audio", "Visual", "Vis. w/distr.", "Counting"]
     if path == "alpha_1_z":
-        fig, ax = dpte_bar(mod_ests, task="zaehlen", task_name={"zaehlen":"Counting"})
-    else:
+        fig, ax = dpte_bar(mod_ests, task="zaehlen",
+                           task_name={"zaehlen":"Counting"},
+                           xlim=(-0.2, 0.5))
+    elif path == "alpha_1_m":
+        fig, ax = dpte_bar_multi(mod_ests, conds, cond_names, leg_loc=(0, 0.35),
+                                 xlim=(-0.5, 1))
+    elif path == "theta_0_c":
+        fig, ax = dpte_bar_multi(mod_ests, conds, cond_names, leg_loc=(0.55, 0.6))
+    elif path == "alpha_0_c":
         fig, ax = dpte_bar_multi(mod_ests, conds, cond_names, leg_loc=(0, 0.35))
+    elif path == "alpha_1_LA1" or path == "alpha_1_LV1":
+        fig, ax = dpte_bar_multi(mod_ests, conds, cond_names, leg_loc=(0, 0.35),
+                                 xlim=(-0.05, 0.05))
 
 # consolidate as single image in numpy format
 io_buf = io.BytesIO()
