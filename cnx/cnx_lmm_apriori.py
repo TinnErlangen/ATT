@@ -175,24 +175,23 @@ paths["alpha_0_c"] = {"LH mid-temporal":{"from":["L7097_L4359-lh"], "to":["all"]
                       "RH V1":{"from":["L2340_L1933-rh"], "to":["all"]}
                       }
 paths["alpha_1_t"] = {"LH parietal":{"from":["L4557-lh"], "to":["all"]}}
-paths["alpha_1_m"] = {"LH parietal":{"from":["L4557-lh"], "to":["all"]},
-                      "LH motor":{"from":["L3395-lh", "L8143_L7523-lh",
-                                          "L8143-lh"],
-                                  "to":["all"]}}
-paths["alpha_1_z"] = {
-                      "LH TPJ":{"from":["L8729_L7491-lh",
+paths["alpha_1_m"] = {"LH Motor/\nParietal":{"from":["L3395-lh", "L8143-lh",
+                                             "L7491_L4557-lh", "L4557-lh"],
+                                       "to":["all"]}
+                     }
+paths["alpha_1_z"] = {"LH TPJ":{"from":["L8729_L7491-lh",
                                         "L7491_L5037-lh"], "to":["all"]},
                       "RH TPJ":{"from":["L5037-rh"], "to":["all"]},
                       "LH parietal":{"from":["L4557-lh"], "to":["all"]}
                      }
-paths["alpha_1_LA1"] = {"LH P\u2192LH A1":{"from":["L4557-lh"], "to":["L2235-lh"]},
-                       "LH M\u2192LH A1":{"from":["L3395-lh", "L8143_L7523-lh",
-                                                  "L8143-lh"],
-                                          "to":["L2235-lh"]}}
-paths["alpha_1_LV1"] = {"LH P\u2192LH V1":{"from":["L4557-lh"], "to":["L2340_L1933-lh"]},
-                       "LH M\u2192LH V1":{"from":["L3395-lh", "L8143_L7523-lh",
-                                                  "L8143-lh"],
-                                          "to":["L2340_L1933-lh"]}}
+paths["alpha_1_LA1"] = {"LH M/P\u2192LH A1":{"from":["L3395-lh", "L8143-lh",
+                                             "L7491_L4557-lh", "L4557-lh"],
+                                             "to":["L2235-lh"]}
+                       }
+paths["alpha_1_LV1"] = {"LH M/P\u2192LH V1":{"from":["L3395-lh", "L8143-lh",
+                                             "L7491_L4557-lh", "L4557-lh"],
+                                             "to":["L2340_L1933-lh"]}
+                       }
 
 
 subjs = ["ATT_10", "ATT_11", "ATT_12", "ATT_13", "ATT_14", "ATT_15", "ATT_16",
@@ -335,15 +334,15 @@ else:
                            task_name={"zaehlen":"Counting"},
                            xlim=(-0.2, 0.5))
     elif path == "alpha_1_m":
-        fig, ax = dpte_bar_multi(mod_ests, conds, cond_names, leg_loc=(0, 0.35),
-                                 xlim=(-0.5, 1))
+        fig, ax = dpte_bar_multi(mod_ests, conds, cond_names, leg_loc=(0.65, 0.65),
+                                 xlim=(-0.5, 1.2))
     elif path == "theta_0_c":
         fig, ax = dpte_bar_multi(mod_ests, conds, cond_names, leg_loc=(0.55, 0.6))
     elif path == "alpha_0_c":
         fig, ax = dpte_bar_multi(mod_ests, conds, cond_names, leg_loc=(0, 0.35))
     elif path == "alpha_1_LA1" or path == "alpha_1_LV1":
-        fig, ax = dpte_bar_multi(mod_ests, conds, cond_names, leg_loc=(0, 0.35),
-                                 xlim=(-0.05, 0.05))
+        fig, ax = dpte_bar_multi(mod_ests, conds, cond_names, leg_loc=(0.65, 0.65),
+                                 xlim=(-0.06, 0.06))
 
 # consolidate as single image in numpy format
 io_buf = io.BytesIO()

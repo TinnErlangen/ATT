@@ -29,7 +29,7 @@ significance with the AIC and permutations, and visualise results
 
 proc_dir = "/home/jev/ATT_dat/proc/"
 lmm_dir = "/home/jev/ATT_dat/lmm/"
-band = "theta_0"
+band = "alpha_0"
 node_n = 2415
 perm_n = 1024
 threshold = 0.05 # threshold for AIC comparison
@@ -254,10 +254,15 @@ hemi_arranged = []
 for lobe, lobe_regs in region_dict.items():
     for hemi in ["lh", "rh"]:
         these_label_names = ["{}-{}".format(lr, hemi) for lr in lobe_regs]
-        these_labels = [x for x in labels if x.name in these_label_names]
+        these_labels = []
+        for tln in these_label_names:
+            for label in labels:
+                if label.name == tln:
+                    these_labels.append(label)
         # order based on ant-pos location
         these_ypos = np.array([x.pos[:,1].mean() for x in these_labels])
-        these_label_names = [these_label_names[x] for x in these_ypos.argsort()]
+        sort_inds = np.argsort(these_ypos)
+        these_label_names = [these_label_names[x] for x in sort_inds]
         inds.extend([label_names.index(x) for x in these_label_names])
         reg_arranged.extend([lobe for x in these_label_names])
         hemi_arranged.extend([hemi for x in these_label_names])

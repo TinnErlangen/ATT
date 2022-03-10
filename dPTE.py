@@ -1,8 +1,6 @@
 from mne.time_frequency.tfr import tfr_array_morlet
 from mne.filter import filter_data
 from scipy.signal import hilbert
-from scipy.stats import circstd
-from scipy.sparse import triu
 from itertools import combinations
 import numpy as np
 from joblib import Parallel, delayed
@@ -125,7 +123,7 @@ def _dPTE_pairwise(x_phase, y_phase, sfreq, delay, x_past_histo=None,
 
     return dPTE_xy
 
-def _dPTE(phase, sfreq, delay=None, epsilon=1e-8):
+def _dPTE(phase, sfreq, delay=None, epsilon=1e-8, roi=None):
     ''' dPTE of all signals against all signals, phase should be signal*time '''
     dPTE_mat = np.zeros((phase.shape[0], phase.shape[0]))
     delay = _get_delay(phase)
@@ -133,16 +131,20 @@ def _dPTE(phase, sfreq, delay=None, epsilon=1e-8):
     histos = []
     for idx in range(phase.shape[0]):
         bn = _hillebrand_binnums(phase[idx,:-delay])
-        bin_edges = np.linspace(-np.pi, np.pi, num=int(np.round(bn)))
+        bin_edges = np.linspace(-np.pi, np.pi, num=int(bn))
         histos.append(np.histogram(phase[idx,:-delay],
                       bins=bin_edges)[0] / samp_nums + epsilon)
-    for (x, y) in combinations(range(phase.shape[0]), 2):
+    if roi is None:
+        combs = combinations(range(phase.shape[0]), 2)
+    else:
+        combs = [(roi, reg_idx) for reg_idx in range(phase.shape[0])]
+    for (x, y) in combs:
         dPTE_mat[x, y] = _dPTE_pairwise(phase[x], phase[y], sfreq, delay,
                                         x_past_histo=histos[x],
                                         y_past_histo=histos[y])
     return dPTE_mat
 
-def epo_dPTE(data, freqs, sfreq, delay=None, n_cycles=None,
+def epo_dPTE(data, freqs, sfreq, delay=None, n_cycles=None, roi=None,
              phase_method="wavelet", freq_band=2, cuda=False, n_jobs=1):
     ''' dPTE on epoched data: epoch*signal*time
     data: e*c*t numpy array, e is epochs, c is channels/sources/t is samples
@@ -151,6 +153,7 @@ def epo_dPTE(data, freqs, sfreq, delay=None, n_cycles=None,
     delay: delay in ms, if None then automatically calculate
     phase_method: "wavelet" or "hilbert"
     freq_band: only relevant when phase_method is "hilbert"
+    ROI: calculate dPTE only from this ROI idx
 
     ------
 
@@ -160,7 +163,6 @@ def epo_dPTE(data, freqs, sfreq, delay=None, n_cycles=None,
     phase = _instant_phase(data, freqs, sfreq, n_cycles=n_cycles,
                            method=phase_method, freq_band=freq_band, cuda=cuda)
     phase = phase.mean(axis=2)
-    results = Parallel(n_jobs=n_jobs, verbose=10)(delayed(_dPTE)(phase[i,],
-                       sfreq, delay) for i in range(phase.shape[0]))
+    results = Parallel(n_jobs=n_jobs, verbose=10)(delayed(_dPTE)(phase[i,], sfreq, delay, roi=roi) for i in range(phase.shape[0]))
     dPTE = np.array(results)
     return dPTE
