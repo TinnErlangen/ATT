@@ -94,36 +94,36 @@ plt.tight_layout()
 plt.savefig("../images/fig_s1.png")
 plt.savefig("../images/fig_s1.tif")
 
-# supplemental 2
+# # supplemental 2
+#
+# fig, axes = plt.subplots(1, 2, figsize=(19.2*2, 19.2))
+# img = np.load("../images/params_bar_alpha_1_LA1.npy")
+# axes[0].imshow(img)
+# axes[0].axis("off")
+# axes[0].set_title("\nto primary auditory cortex", fontsize=34)
+# img = np.load("../images/params_bar_alpha_1_LV1.npy")
+# axes[1].imshow(img)
+# axes[1].axis("off")
+# axes[1].set_title("\nto primary visual cortex", fontsize=34)
+# plt.suptitle("High alpha from left parietal and motor cortex", fontsize=34)
+# plt.tight_layout()
+#
+# plt.savefig("../images/fig3.png")
+# plt.savefig("../images/fig3.tif")
 
-fig, axes = plt.subplots(1, 2, figsize=(19.2*2, 19.2))
-img = np.load("../images/params_bar_alpha_1_LA1.npy")
-axes[0].imshow(img)
-axes[0].axis("off")
-axes[0].set_title("\nto primary auditory cortex", fontsize=34)
-img = np.load("../images/params_bar_alpha_1_LV1.npy")
-axes[1].imshow(img)
-axes[1].axis("off")
-axes[1].set_title("\nto primary visual cortex", fontsize=34)
-plt.suptitle("High alpha from left parietal and motor cortex", fontsize=34)
-plt.tight_layout()
-
-plt.savefig("../images/fig3.png")
-plt.savefig("../images/fig3.tif")
-
-# supplemental 3
-
-fig, axes = plt.subplots(1, 2, figsize=(19.2*2, 19.2))
-img = np.load("../images/params_bar_theta_0_c.npy")
-axes[0].imshow(img)
-axes[0].axis("off")
-axes[0].set_title("Theta", fontsize=34)
-img = np.load("../images/params_bar_alpha_0_c.npy")
-axes[1].imshow(img)
-axes[1].axis("off")
-axes[1].set_title("Low alpha", fontsize=34)
-plt.suptitle("Patterns of divergence from rest", fontsize=34)
-plt.tight_layout()
-
-plt.savefig("../images/fig_s3.png")
-plt.savefig("../images/fig_s3.tif")
+# # supplemental 3
+#
+# fig, axes = plt.subplots(1, 2, figsize=(19.2*2, 19.2))
+# img = np.load("../images/params_bar_theta_0_c.npy")
+# axes[0].imshow(img)
+# axes[0].axis("off")
+# axes[0].set_title("Theta", fontsize=34)
+# img = np.load("../images/params_bar_alpha_0_c.npy")
+# axes[1].imshow(img)
+# axes[1].axis("off")
+# axes[1].set_title("Low alpha", fontsize=34)
+# plt.suptitle("Patterns of divergence from rest", fontsize=34)
+# plt.tight_layout()
+#
+# plt.savefig("../images/fig_s3.png")
+# plt.savefig("../images/fig_s3.tif")

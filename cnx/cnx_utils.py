@@ -698,7 +698,7 @@ def make_brain_image(views, brain, orient="horizontal", text="",
         img_list[text_pan] = img_txt_list[text_pan]
     if legend:
         legend_list = []
-        leg = brain._renderer.plotter.add_legend(legend, bcolor=(1,1,1))
+        leg = brain._renderer.plotter.add_legend(legend, bcolor="w")
         for k,v in views.items():
             brain.show_view(**v)
             scr = brain.screenshot()
@@ -811,12 +811,12 @@ def annotated_matrix(mat, labels, annot_labels, ax=None, cmap="seismic",
     # annotations
     axes["A"].set_xlim(0, N)
     axes["A"].set_ylim(0, annot_H)
-    axes["A"].set_xticks([], labels=[])
-    axes["A"].set_yticks([], labels=[])
+    axes["A"].set_xticklabels([])
+    axes["A"].set_yticklabels([])
     axes["C"].set_ylim(N, 0)
     axes["C"].set_xlim(annot_H, 0)
-    axes["C"].set_xticks([], labels=[])
-    axes["C"].set_yticks([], labels=[])
+    axes["C"].set_xticklabels([])
+    axes["C"].set_yticklabels([])
 
     # build the annotations
     if overlay:

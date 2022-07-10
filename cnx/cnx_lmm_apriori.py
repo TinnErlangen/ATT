@@ -12,6 +12,9 @@ plt.ion()
 from matplotlib.patches import Rectangle
 import io
 
+def CI_arr(CIs, cond):
+    return np.array([CIs[0][cond], CIs[1][cond]])
+
 def load_sparse(filename,convert=True,full=False,nump_type="float32"):
     with open(filename,"rb") as f:
         result = pickle.load(f)
@@ -139,6 +142,67 @@ def dpte_bar_multi(val_dict, conds, cond_names, xlim=(-0.3, 0.3),
 
     return fig, ax
 
+def dpte_bar_multi_1rest(val_dict, conds, cond_names, xlim=(-0.3, 0.3),
+                         bar_h=0.1, colors=None, figsize=(19.2, 19.2),
+                         leg_loc="upper right"):
+    conds = conds.copy()
+    conds.reverse()
+    fig, ax = plt.subplots(1, figsize=figsize)
+    C = len(val_dict)
+    ax.set_ylim(0, C)
+    ax.set_xlim(xlim)
+    yticks = [0.25, 1.5][:C]
+    ax.set_yticks([])
+    xticks = np.linspace(xlim[0], xlim[1]+0.0001, 6)
+    ax.set_xticks(xticks)
+    ax.set_xticklabels(["{:.2f}".format(xt) for xt in xticks], fontsize=50)
+    ax.set_xlabel("estimated regional total dPTE-0.5", fontsize=50)
+
+    colors = ["tab:green", "tab:purple", "tab:pink"]
+    fs = 40
+
+    for pure_idx, (k, v) in enumerate(val_dict.items()):
+        idx = C - pure_idx - 1
+        rest_CIs = v["Rest_CIs"]
+        rect = Rectangle((rest_CIs[0], yticks[idx]-bar_h/2),
+                          rest_CIs[1]-rest_CIs[0], bar_h*len(conds),
+                          color="gray", alpha=0.3)
+        ax.add_patch(rect)
+        ax.vlines(v["Rest"],
+                  yticks[idx]-bar_h/2,
+                  yticks[idx]-bar_h/2+bar_h*len(conds),
+                  color="gray", alpha=0.9)
+
+        task_dptes = []
+        for m_idx, (cond, color) in enumerate(zip(conds, colors)):
+            task_CIs = (v["{}_CIs".format(cond)])
+            rect = Rectangle((task_CIs[0], yticks[idx]-bar_h/2+bar_h*m_idx),
+                              task_CIs[1]-task_CIs[0], bar_h, color=color,
+                              alpha=0.3)
+            ax.add_patch(rect)
+            ax.vlines(v[cond],
+                      yticks[idx]-bar_h/2+bar_h*m_idx,
+                      yticks[idx]-bar_h/2+bar_h*m_idx+bar_h, color=color,
+                      alpha=0.9)
+            task_dptes.append(v[cond])
+
+        max_amp = task_dptes[np.abs(task_dptes).argmax()]
+
+        if max(max_amp, v["Rest"]) > 0.:
+            ax.text(xlim[0] + 0.0005, yticks[idx]+bar_h*len(conds)/2-bar_h/2,
+                    k, fontsize=fs, va="center")
+        else:
+            ax.text(xlim[1] - 0.0005, yticks[idx]+bar_h*len(conds)/2-bar_h/2,
+                    k, fontsize=fs, va="center", ha="right")
+
+    leg_lines = [plt.Line2D([0], [0], color="gray", lw=10)]
+    colors.reverse()
+    leg_lines += [plt.Line2D([0], [0], color=c, lw=10) for c in colors]
+    ax.legend(leg_lines, ["Rest"] + cond_names, fontsize=fs, loc=leg_loc)
+    ax.vlines(0., 0, C, color="black")
+
+    return fig, ax
+
 # get command line parameters
 parser = argparse.ArgumentParser()
 parser.add_argument('--band', type=str, required=True)
@@ -191,6 +255,11 @@ paths["alpha_1_LA1"] = {"LH M/P\u2192LH A1":{"from":["L3395-lh", "L8143-lh",
 paths["alpha_1_LV1"] = {"LH M/P\u2192LH V1":{"from":["L3395-lh", "L8143-lh",
                                              "L7491_L4557-lh", "L4557-lh"],
                                              "to":["L2340_L1933-lh"]}
+                       }
+paths["alpha_1_m_AV"] = {"LH M/P\u2192LH V1":{"from":["L3395-lh", "L8143-lh",
+                                             "L7491_L4557-lh", "L4557-lh"],
+                                             "V_to":["L2340_L1933-lh"],
+                                             "A_to":["L2235-lh", "L7755-lh"]}
                        }
 
 
@@ -281,6 +350,66 @@ if path in ["theta_0_t", "alpha_0_t", "alpha_1_t"]:
     elif path == "alpha_1_t":
         xlim = [-0.5, 0.5]
     fig, ax = dpte_bar(mod_ests, xlim=xlim)
+elif path == "alpha_1_m_AV":
+    formula = "Brain ~ C(Block, Treatment('rest'))*C(Dest, Treatment('A'))"
+    df = dm_cond.copy()
+    blocks = df["Block"].values
+    these_data = data.copy()
+    valid_inds = (blocks != "zaehlen")
+    these_data = these_data[valid_inds,]
+
+    df = df[valid_inds]
+    v = list(paths[path].values())[0]
+    if v["from"][0] == "all":
+        from_inds = np.arange(mat_n)
+    else:
+        from_inds = np.array([label_names.index(x) for x in v["from"]])
+    from_mat = these_data[:, from_inds,]
+
+    dfs = []
+    for to_idx, this_to in enumerate(["A_to", "V_to"]):
+        this_df = df.copy()
+        if v[this_to][0] == "all":
+            to_inds = np.arange(mat_n)
+        else:
+            to_inds = np.array([label_names.index(x) for x in v[this_to]])
+        to_mat = from_mat[:, :, to_inds]
+        quant = np.nansum(to_mat.reshape(len(to_mat), -1), axis=1)
+        this_df["Brain"] = quant
+        dest = np.empty(len(quant), dtype=str)
+        dest[:] = this_to
+        this_df["Dest"] = dest
+        dfs.append(this_df)
+    big_df = pd.concat(dfs)
+    groups = big_df["Subj"].values
+    model = MixedLM.from_formula(formula, big_df, groups=groups)
+    fit = model.fit()
+    CIs = fit.conf_int()
+
+    me = {}
+    me["Rest"] = fit.params["Intercept"]
+    me["audio"] = fit.params["Intercept"] + fit.params["C(Block, Treatment('rest'))[T.audio]"]
+    me["visual"] = fit.params["Intercept"] + fit.params["C(Block, Treatment('rest'))[T.visual]"]
+    me["visselten"] = fit.params["Intercept"] + fit.params["C(Block, Treatment('rest'))[T.visselten]"]
+    me["Rest_CIs"] = CI_arr(CIs, "Intercept")
+    me["audio_CIs"] = CI_arr(CIs, "C(Block, Treatment('rest'))[T.audio]") + me["Rest"]
+    me["visual_CIs"] = CI_arr(CIs, "C(Block, Treatment('rest'))[T.visual]") + me["Rest"]
+    me["visselten_CIs"] = CI_arr(CIs, "C(Block, Treatment('rest'))[T.visselten]") + me["Rest"]
+    mod_ests["LH M/P\u2192LH A1"] = me.copy()
+
+    me = {}
+    v_fx = fit.params["C(Dest, Treatment('A'))[T.V]"]
+    CI_base = fit.params["Intercept"] + v_fx
+    me["Rest"] = fit.params["Intercept"] + fit.params["C(Dest, Treatment('A'))[T.V]"]
+    me["audio"] = fit.params["Intercept"] + fit.params["C(Block, Treatment('rest'))[T.audio]"] + v_fx + fit.params["C(Block, Treatment('rest'))[T.audio]:C(Dest, Treatment('A'))[T.V]"]
+    me["visual"] = fit.params["Intercept"] + fit.params["C(Block, Treatment('rest'))[T.visual]"] + v_fx + fit.params["C(Block, Treatment('rest'))[T.visual]:C(Dest, Treatment('A'))[T.V]"]
+    me["visselten"] = fit.params["Intercept"] + fit.params["C(Block, Treatment('rest'))[T.visselten]"] + v_fx + fit.params["C(Block, Treatment('rest'))[T.visselten]:C(Dest, Treatment('A'))[T.V]"]
+    me["Rest_CIs"] = CI_arr(CIs, "Intercept") + fit.params["C(Dest, Treatment('A'))[T.V]"]
+    me["audio_CIs"] = CI_arr(CIs, "C(Block, Treatment('rest'))[T.audio]:C(Dest, Treatment('A'))[T.V]") + CI_base + fit.params["C(Block, Treatment('rest'))[T.audio]"]
+    me["visual_CIs"] = CI_arr(CIs, "C(Block, Treatment('rest'))[T.visual]:C(Dest, Treatment('A'))[T.V]") + CI_base + fit.params["C(Block, Treatment('rest'))[T.visual]"]
+    me["visselten_CIs"] = CI_arr(CIs, "C(Block, Treatment('rest'))[T.visselten]:C(Dest, Treatment('A'))[T.V]") + CI_base + fit.params["C(Block, Treatment('rest'))[T.visselten]"]
+    mod_ests["LH M/P\u2192LH V1"] = me
+
 else:
     this_path = paths[path]
     for k, v in this_path.items():
@@ -327,22 +456,30 @@ else:
             mod_ests[k]["{}_CIs".format(cond)] = np.array([CIs[0][stat_cond],
                                                            CIs[1][stat_cond]]),
 
-    conds = ["audio", "visual", "visselten", "zaehlen"]
-    cond_names = ["Audio", "Visual", "Vis. w/distr.", "Counting"]
-    if path == "alpha_1_z":
-        fig, ax = dpte_bar(mod_ests, task="zaehlen",
-                           task_name={"zaehlen":"Counting"},
-                           xlim=(-0.2, 0.5))
-    elif path == "alpha_1_m":
-        fig, ax = dpte_bar_multi(mod_ests, conds, cond_names, leg_loc=(0.65, 0.65),
-                                 xlim=(-0.5, 1.2))
-    elif path == "theta_0_c":
-        fig, ax = dpte_bar_multi(mod_ests, conds, cond_names, leg_loc=(0.55, 0.6))
-    elif path == "alpha_0_c":
-        fig, ax = dpte_bar_multi(mod_ests, conds, cond_names, leg_loc=(0, 0.35))
-    elif path == "alpha_1_LA1" or path == "alpha_1_LV1":
-        fig, ax = dpte_bar_multi(mod_ests, conds, cond_names, leg_loc=(0.65, 0.65),
-                                 xlim=(-0.06, 0.06))
+conds = ["audio", "visual", "visselten", "zaehlen"]
+cond_names = ["Audio", "Visual", "Vis. w/distr.", "Counting"]
+if path == "alpha_1_z":
+    fig, ax = dpte_bar(mod_ests, task="zaehlen",
+                       task_name={"zaehlen":"Counting"},
+                       xlim=(-0.2, 0.5))
+elif path == "alpha_1_m":
+    fig, ax = dpte_bar_multi(mod_ests, conds, cond_names, leg_loc=(0.65, 0.65),
+                             xlim=(-0.5, 1.2))
+elif path == "theta_0_c":
+    fig, ax = dpte_bar_multi(mod_ests, conds, cond_names, leg_loc=(0.55, 0.6))
+elif path == "alpha_0_c":
+    fig, ax = dpte_bar_multi(mod_ests, conds, cond_names, leg_loc=(0, 0.35))
+elif path == "alpha_1_LA1" or path == "alpha_1_LV1":
+    fig, ax = dpte_bar_multi(mod_ests, conds, cond_names, leg_loc=(0.65, 0.65),
+                             xlim=(-0.06, 0.06))
+elif path == "alpha_1_m_AV":
+    conds = ["audio", "visual", "visselten"]
+    cond_names = ["Audio", "Visual", "Vis. w/distr."]
+    fig, ax = dpte_bar_multi_1rest(mod_ests, conds, cond_names, leg_loc=(0., 0.35),
+                             xlim=(-0.1, 0.1))
+    ax.set_title("Motor/Parietal connectivity to A1 and V1", fontsize=38)
+    plt.savefig("../images/fig_3.tif")
+    plt.savefig("../images/fig_3.png")
 
 # consolidate as single image in numpy format
 io_buf = io.BytesIO()

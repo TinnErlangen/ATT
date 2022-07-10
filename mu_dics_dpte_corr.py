@@ -29,6 +29,12 @@ model = MixedLM.from_formula(formula, df, groups=df["Subj"],
 dPTE_DICS_fit = model.fit(reml=False)
 print(dPTE_DICS_fit.summary())
 print(dPTE_DICS_fit.aic)
+model = MixedLM.from_formula(formula, df, groups=df["Subj"],
+                             re_formula=None)
+dPTE_DICS_fit = model.fit(reml=False)
+print(dPTE_DICS_fit.summary())
+print(dPTE_DICS_fit.aic)
+
 
 formula = "DICS_log ~ dPTE*C(Cond, Treatment('rest'))"
 re_formula = "~dPTE*C(Cond, Treatment('rest'))"
@@ -45,7 +51,7 @@ dPTE_null_fit = model.fit(reml=True)
 resids = dPTE_null_fit.resid
 df["dPTE_resid"] = resids
 
-fig, axes = plt.subplots(4, 6)
+fig, axes = plt.subplots(4, 6, figsize=(38.4, 28.6))
 axes = [ax for axe in axes for ax in axe]
 subjs = list(df["Subj"].unique())
 for idx, (subj, ax) in enumerate(zip(subjs, axes)):
@@ -62,6 +68,18 @@ for idx, (subj, ax) in enumerate(zip(subjs, axes)):
     else:
         ax.set_ylabel("dPTE", fontsize=20)
     ax.set_title("Participant {}".format(idx+1), fontsize=16)
-plt.suptitle("DICS/dPTE relationship by participant", fontsize=48)
+plt.suptitle("High alpha motor/parietal DICS-dPTE relationship by participant", fontsize=48)
 plt.savefig("../images/fig_s4.png")
 plt.savefig("../images/fig_s4.tif")
+
+# overall
+fig, ax = plt.subplots(1, figsize=(19.2, 12))
+sns.regplot(data=df, x="DICS_log", y="dPTE", color="blue",
+            scatter_kws={"alpha":0.1})
+ax.set_xlabel("Log DICS", fontsize=20)
+ax.set_ylabel("dPTE", fontsize=20)
+ax.set_ylim(-0.12, 0.12)
+ax.tick_params(axis="both", which="major", labelsize=16)
+ax.set_title("High alpha motor/parietal DICS-dPTE relationship", fontsize=40)
+plt.savefig("../images/fig_5.png")
+plt.savefig("../images/fig_5.tif")
