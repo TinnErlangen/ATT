@@ -58,11 +58,11 @@ axes["E"].text(txt_w, txt_h, "E| High alpha counting backwards", transform=axes[
 for ax in axes.values():
     ax.axis("off")
 
-plt.suptitle("Main patterns of change from resting state", fontsize=34)
+plt.suptitle("Main patterns of task-based change from resting state", fontsize=34)
 plt.tight_layout()
 
-plt.savefig("../images/fig2.png")
-plt.savefig("../images/fig2.tif")
+plt.savefig("../images/fig4.png")
+plt.savefig("../images/fig4.tif")
 
 # supplemental 1
 

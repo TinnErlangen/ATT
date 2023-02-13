@@ -45,27 +45,17 @@ freqs = band_info[band]["freqs"]
 subjects_dir = "/home/jev/hdd/freesurfer/subjects/"
 proc_dir = "../proc/"
 spacing = 5
-n_jobs = 4
+n_jobs = 8
 parc = "RegionGrowing_70"
 labels = mne.read_labels_from_annot("fsaverage",parc=parc,subjects_dir=subjects_dir)
 label_names = [lab.name for lab in labels]
 snr = 1.0
 lambda2 = 1.0 / snr ** 2
 
-df_dict = {"Subj":[], "Cond":[], "DICS":[], "dPTE":[]}
+df_dict = {"Subj":[], "Task":[], "Cond":[], "DICS":[], "dPTE":[], "Reg":[]}
 
 runs = ["rest", "audio", "visual", "visselten"]
 wavs = ["4000fftf", "4000Hz", "7000Hz", "4000cheby"]
-ROIs = ["L3395-lh", "L8143-lh", "L7491_L4557-lh", "L4557-lh"]
-# combine ROIs into one ROI then get rid of the individual ones
-ROI_inds = [label_names.index(ROI) for ROI in ROIs]
-new_label = labels[ROI_inds[0]]
-for ROI_idx in ROI_inds[1:]:
-    new_label += labels[ROI_idx]
-new_label.name = "Broad_Motor"
-labels = [lab for lab in labels if lab.name not in ROIs] + [new_label]
-label_names = [lab.name for lab in labels]
-ROI_idx = len(label_names)-1  # new label is last in the list
 cov = mne.read_cov("{}empty-cov.fif".format(proc_dir))
 
 for sub in subjs:
@@ -104,34 +94,53 @@ for sub in subjs:
     fwd = mne.read_forward_solution(fwd_name)
     filters = make_dics(epo.info, fwd, csd, real_filter=True,
                         weight_norm=None, reduce_rank=True,
-                        pick_ori="max-power", label=morph_labels[ROI_idx])
+                        pick_ori="max-power")
 
     for event in range(len(epo)):
         print(event)
         event_csd = csd_morlet(epo[event], frequencies=bi["freqs"],
                                n_jobs=n_jobs, n_cycles=bi["cycles"], decim=2)
         stc, freqs = apply_dics_csd(event_csd, filters)
-        dics_datum = stc.data.mean() * 1e+26
-        df_dict["DICS"].append(dics_datum)
-        df_dict["Subj"].append(sub)
-        cond = "rest" if epo[event].events[0,-1] == 255 else "task"
-        df_dict["Cond"].append(cond)
+        stc_arr = mne.extract_label_time_course(stc, morph_labels, src,
+                                              mode="mean")
+        stc_arr = np.array(stc_arr).mean(axis=1)
+        for lab_idx, lab in enumerate(morph_labels):
+            dics_datum = stc_arr[lab_idx] * 1e+26
+            df_dict["DICS"].append(dics_datum)
+            df_dict["Subj"].append(sub)
+            task = "rest" if epo[event].events[0,-1] == 255 else "task"
+            df_dict["Task"].append(task)
+            if epo[event].events[0,-1] == 255:
+                cond = "rest"
+            elif 10 <= epo[event].events[0,-1] <= 19:
+                cond = "audio"
+            elif 20 <= epo[event].events[0,-1] <= 29:
+                cond = "visselten"
+            elif 30 <= epo[event].events[0,-1] <= 39:
+                cond = "visual"
+            df_dict["Cond"].append(cond)
+            df_dict["Reg"].append(lab.name)
 
     # dPTE
     inv_op = mne.minimum_norm.make_inverse_operator(epo.info, fwd, cov)
     stcs = mne.minimum_norm.apply_inverse_epochs(epo, inv_op, lambda2,
                                                  method="sLORETA",
                                                  pick_ori="normal")
-
     l_arr = mne.extract_label_time_course(stcs, morph_labels, src,
                                           mode="pca_flip")
     l_arr = np.array(l_arr)
+
     dPTE = epo_dPTE(l_arr, bi["freqs"], epo.info["sfreq"],
-                    n_cycles=bi["cycles"], n_jobs=n_jobs, roi=ROI_idx)
-    dPTE = dPTE[:, ROI_idx,]
+                    n_cycles=bi["cycles"], n_jobs=n_jobs)
+    dPTE[dPTE.nonzero()] -= 0.5
     for epo_idx in range(len(dPTE)):
-        avg_dpte = (dPTE[epo_idx,][dPTE[epo_idx,].nonzero()]-0.5).mean()
-        df_dict["dPTE"].append(avg_dpte)
+        dPTE[epo_idx,] += dPTE[epo_idx,].T * -1
+        for lab_idx in range(len(morph_labels)):
+            avg_dpte = dPTE[epo_idx, lab_idx, ].mean()
+            if avg_dpte == 0.:
+                breakpoint()
+            df_dict["dPTE"].append(avg_dpte)
+
 
 df = pd.DataFrame.from_dict(df_dict)
-df.to_pickle("{}mu_dics_dpte.pickle".format(proc_dir))
+df.to_pickle("{}mu_dics_dpte_all.pickle".format(proc_dir))

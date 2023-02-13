@@ -56,8 +56,7 @@ def dpte_bar(val_dict, xlim=(-0.2, 0.2), bar_h=0.2, colors=None,
                   yticks[idx]-bar_h/2, yticks[idx]+bar_h/2,
                   color="gray", alpha=0.9)
 
-        task_CIs = (v["{}_CIs".format(task)] + v["Rest_{}".format(task)])
-
+        task_CIs = (v["{}_CIs".format(task)] + v["Rest_{}".format(task)])[0]
         rect = Rectangle((task_CIs[0], yticks[idx]-bar_h/2),
                           task_CIs[1]-task_CIs[0], bar_h, color=task_color,
                           alpha=0.3)
@@ -67,10 +66,10 @@ def dpte_bar(val_dict, xlim=(-0.2, 0.2), bar_h=0.2, colors=None,
 
         if max((v[task] + v["Rest_{}".format(task)]),
                 v["Rest_{}".format(task)]) > 0.:
-            ax.text(xlim[0] + 0.0005, yticks[idx], k,
+            ax.text(xlim[0] + 0.0005, yticks[idx]+bar_h, k,
                     va="center", size=fs)
         else:
-            ax.text(xlim[1] - 0.0005, yticks[idx], k,
+            ax.text(xlim[1] - 0.0005, yticks[idx]+bar_h, k,
                     va="center", ha="right", size=fs)
 
     ax.vlines(0., 0, C, color="black")
@@ -128,10 +127,10 @@ def dpte_bar_multi(val_dict, conds, cond_names, xlim=(-0.3, 0.3),
         max_amp = task_dptes[np.abs(task_dptes).argmax()]
 
         if max(max_amp, v["Rest_{}".format(cond)]) > 0.:
-            ax.text(xlim[0] + 0.0005, yticks[idx]+bar_h*len(conds)/2-bar_h/2,
+            ax.text(xlim[0] + 0.0005, yticks[idx]+bar_h*len(conds)/2-bar_h/2+bar_h,
                     k, fontsize=fs, va="center")
         else:
-            ax.text(xlim[1] - 0.0005, yticks[idx]+bar_h*len(conds)/2-bar_h/2,
+            ax.text(xlim[1] - 0.0005, yticks[idx]+bar_h*len(conds)/2-bar_h/2+bar_h,
                     k, fontsize=fs, va="center", ha="right")
 
     leg_lines = [plt.Line2D([0], [0], color="gray", lw=10)]
@@ -189,10 +188,10 @@ def dpte_bar_multi_1rest(val_dict, conds, cond_names, xlim=(-0.3, 0.3),
         max_amp = task_dptes[np.abs(task_dptes).argmax()]
 
         if max(max_amp, v["Rest"]) > 0.:
-            ax.text(xlim[0] + 0.0005, yticks[idx]+bar_h*len(conds)/2-bar_h/2,
+            ax.text(xlim[0] + 0.0005, yticks[idx]+bar_h*len(conds)/2-bar_h/2+bar_h,
                     k, fontsize=fs, va="center")
         else:
-            ax.text(xlim[1] - 0.0005, yticks[idx]+bar_h*len(conds)/2-bar_h/2,
+            ax.text(xlim[1] - 0.0005, yticks[idx]+bar_h*len(conds)/2-bar_h/2+bar_h,
                     k, fontsize=fs, va="center", ha="right")
 
     leg_lines = [plt.Line2D([0], [0], color="gray", lw=10)]
@@ -223,7 +222,7 @@ paths["theta_0_t"] = {"LH motor":{"from":["L3395-lh"], "to":["all"]},
 paths["theta_0_c"] = {"RH dorsal parietal":{"from":["L4557_L2996-rh"],
                       "to":["all"]}
                      }
-paths["alpha_0_t"] = {"LH hub":{"from":["L2340-lh"], "to":["all"]},
+paths["alpha_0_t"] = {"LH occipital hub":{"from":["L2340-lh"], "to":["all"]},
                       "Other occipital":{"from":["L4236_L1933-lh",
                                                "L4236_L1933-rh",
                                                "L2340_L1933-lh",
@@ -478,8 +477,8 @@ elif path == "alpha_1_m_AV":
     fig, ax = dpte_bar_multi_1rest(mod_ests, conds, cond_names, leg_loc=(0., 0.35),
                              xlim=(-0.1, 0.1))
     ax.set_title("Motor/Parietal connectivity to A1 and V1", fontsize=38)
-    plt.savefig("../images/fig_3.tif")
-    plt.savefig("../images/fig_3.png")
+    plt.savefig("../images/fig_5.tif")
+    plt.savefig("../images/fig_5.png")
 
 # consolidate as single image in numpy format
 io_buf = io.BytesIO()

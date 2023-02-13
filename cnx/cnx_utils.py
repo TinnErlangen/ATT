@@ -521,7 +521,7 @@ def plot_rgba(vec_rgba, labels, parc, hemi="both", lup_title=None,
     for l_idx, l in enumerate(labels):
         if np.array_equal(vec_rgba[l_idx], [0,0,0,0]):
             continue
-        brain.add_label(l, color=vec_rgba[l_idx,:3], alpha=vec_rgba[l_idx,3])
+        brain.add_label(l, color=vec_rgba[l_idx,], hemi=l.hemi)
 
     brain.show()
     return brain
@@ -681,7 +681,8 @@ def make_brain_figure(views, brain, cbar=None, vmin=None, vmax=None,
 def make_brain_image(views, brain, orient="horizontal", text="",
                      text_loc=None, text_pan=None, fontsize=160,
                      legend=None, legend_pan=None, cbar=None,
-                     vmin=None, vmax=None, cbar_label=""):
+                     vmin=None, vmax=None, cbar_label="",
+                     cbar_separate=False):
     img_list = []
     axis = 1 if orient=="horizontal" else 0
     for k,v in views.items():
@@ -698,7 +699,7 @@ def make_brain_image(views, brain, orient="horizontal", text="",
         img_list[text_pan] = img_txt_list[text_pan]
     if legend:
         legend_list = []
-        leg = brain._renderer.plotter.add_legend(legend, bcolor="w")
+        leg = brain._renderer.plotter.add_legend(legend, bcolor="w", size=(.3, .3))
         for k,v in views.items():
             brain.show_view(**v)
             scr = brain.screenshot()
@@ -718,9 +719,9 @@ def make_brain_image(views, brain, orient="horizontal", text="",
         norm = Normalize(vmin, vmax)
         scalmap = cm.ScalarMappable(norm, cbar)
         if orient == "horizontal":
-            colbar_size = (img_list[-1].shape[0]*4, img_list[-1].shape[1]/6)
+            colbar_size = (img_list[-1].shape[0]*len(views), img_list[-1].shape[1]/6)
         else:
-            colbar_size = (img_list[-1].shape[0]/6, img_list[-1].shape[1]*4)
+            colbar_size = (img_list[-1].shape[0]/6, img_list[-1].shape[1]*len(views))
         colbar_size = np.array(colbar_size) / 100
         fig, ax = plt.subplots(1,1, figsize=colbar_size)
         colbar = plt.colorbar(scalmap, cax=ax, orientation=orient)
@@ -743,7 +744,7 @@ def make_brain_image(views, brain, orient="horizontal", text="",
 def annotated_matrix(mat, labels, annot_labels, ax=None, cmap="seismic",
                      vmin=None, vmax=None, annot_height=2,
                      annot_vert_pos="left", annot_hor_pos="bottom",
-                     overlay=False, cbar=False):
+                     overlay=False, cbar=False, figsize=(19.2, 19.2)):
 
     annot_H = annot_height if overlay else annot_height * len(annot_labels)
 
@@ -793,7 +794,7 @@ def annotated_matrix(mat, labels, annot_labels, ax=None, cmap="seismic",
     else:
         mos_str = b_str + a_str
     mos_str = mos_str[:-1]
-    fig, axes = plt.subplot_mosaic(mos_str, figsize=(19.2,19.2))
+    fig, axes = plt.subplot_mosaic(mos_str, figsize=figsize)
     axes["X"].axis("off")
     if cbar:
         axes["Y"].axis("off")
@@ -846,9 +847,11 @@ def annotated_matrix(mat, labels, annot_labels, ax=None, cmap="seismic",
             rect = Rectangle((col_inds[idx], lab_idx), heights[idx], 1,
                              color=col, lw=0)
             axes["C"].add_patch(rect)
-    axes["A"].set_xlabel("Y", fontsize=64)
-    axes["C"].set_ylabel("X", fontsize=64, rotation="horizontal", labelpad=30)
+    axes["A"].set_xlabel("Y", fontsize=82, weight="bold")
+    axes["C"].set_ylabel("X", fontsize=82, rotation="horizontal", labelpad=30,
+                         weight="bold")
 
+    #plt.tight_layout()
     # consolidate as single image in numpy format
     io_buf = io.BytesIO()
     fig.savefig(io_buf, format='raw', dpi=100)

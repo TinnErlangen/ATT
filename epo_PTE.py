@@ -7,15 +7,7 @@ from mne.time_frequency import tfr_array_morlet
 from dPTE import epo_dPTE
 from joblib import Parallel, delayed
 import pickle
-from cnx_utils import TriuSparse, load_sparse
-
-def do_PTE(data):
-    data = data.T
-    delay = get_delay(data)
-    phase_inc = data + np.pi
-    binsize = get_binsize(phase_inc)
-    d_phase = get_discretized_phase(phase_inc, binsize)
-    return compute_dPTE_rawPTE(d_phase, delay)
+#from cnx_utils import TriuSparse, load_sparse
 
 proc_dir = "../proc/"
 subjects_dir = "/home/jev/hdd/freesurfer/subjects/"
@@ -94,6 +86,7 @@ for sub in subjs:
         stcs = mne.minimum_norm.apply_inverse_epochs(epo,inv_op,lambda2,
                                                     method=inv_method,
                                                     pick_ori="normal")
+        breakpoint()
         l_arr = [s.extract_label_time_course(labels,src,mode="pca_flip").astype("float32") for s in stcs]
         l_arr = np.array(l_arr)
 

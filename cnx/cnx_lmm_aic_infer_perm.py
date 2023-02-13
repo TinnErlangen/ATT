@@ -13,7 +13,8 @@ import matplotlib.pyplot as plt
 import matplotlib
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize
-from matplotlib.patches import Rectangle
+from matplotlib.patches import Rectangle, Patch
+from matplotlib.lines import Line2D
 plt.ion()
 
 def pval_from_perms(perms, val):
@@ -38,7 +39,7 @@ parc = "RegionGrowing_70"
 labels = mne.read_labels_from_annot("fsaverage",parc)
 label_names = [label.name for label in labels]
 mat_n = len(labels)
-calc_aic = False
+calc_aic = True
 background = (1,1,1)
 text_color = (0,0,0)
 top_cnx = 150
@@ -82,6 +83,9 @@ models = ["null","simple","cond"]
 vars = ["aics", "order", "probs", "winner"] # these will form the main keys of aic_comps dictionary below
 var_base = "C(Block, Treatment('rest'))" # stem of the condition names in statsmodels format
 stat_conds = ["Intercept"] + [var_base+"[T."+cond+"]" for cond in conds[1:]] # convert simple cond names to statsmodels cond names
+
+legend_elements = [Patch(facecolor="red", label="Source"),
+                   Patch(facecolor="blue",label="Destination")]
 
 if calc_aic:
     # get permutations
@@ -242,7 +246,7 @@ with open("{}{}/cnx_params_{}.pickle".format(lmm_dir, band, band), "wb") as f:
 # rest cnx by brainview
 brain_img = make_brain_image(views, params_brains["rest"], text="",
                              text_loc="lup", text_pan=0, orient="horizontal",
-                             legend=[["Source", "red"], ["Destination", "blue"]],
+                             legend=None,
                              legend_pan=3)
 
 # cnx conditions by matrix
@@ -284,11 +288,13 @@ annot_labels = [{"col_key":{"occipital":"tab:orange", "parietal":"gold",
 
 # estimated parameters
 mos_str = """
-          AAAABBBBCCCCX
-          DDDDEEEEFFFFY
+          AAABBBCCCGXH
+          DDDEEEFFFYYY
           """
 ax_names = ["A", "B", "C", "D", "E", "F"]
 fx_fig, fx_axes = plt.subplot_mosaic(mos_str, figsize=(76.8, 38.4))
+fx_axes["G"].axis("off")
+fx_axes["H"].axis("off")
 # get universal vmin, vmax
 all_vals = np.concatenate(list(cnx_params.values()))
 vmin, vmax = np.min(all_vals), np.max(all_vals)
@@ -300,9 +306,9 @@ for ax_n, cond, stat_cond in zip(ax_names, conds, stat_conds):
                            annot_vert_pos="left", annot_hor_pos="bottom",
                            overlay=True, annot_height=6, vmin=vmin, vmax=vmax)
     fx_axes[ax_n].imshow(img)
-    fx_axes[ax_n].set_title(cond, fontsize=84)
+    fx_axes[ax_n].set_title(cond, fontsize=80, weight="bold")
     fx_axes[ax_n].axis("off")
-
+plt.tight_layout()
 ## make separate image of resting state for later figure
 fig, ax = plt.subplots(1,1, figsize=(19.2, 19.2))
 img = annotated_matrix(cnx_params["Intercept"], label_names, annot_labels,
@@ -323,25 +329,24 @@ io_buf.close()
 np.save("../images/{}_rest_annotated.npy".format(band), rest_img)
 ##
 
-
+fs = 80
 # colorbar in Y
 disp_vmin, disp_vmax = np.around(vmin, decimals=3), np.around(vmax, decimals=3)
 cbar = plt.colorbar(ScalarMappable(norm=Normalize(vmin=disp_vmin, vmax=disp_vmax),
                     cmap="seismic"), cax=fx_axes["X"])
 cbar.ax.set_yticks([disp_vmin, 0, disp_vmax])
-cbar.ax.set_yticklabels([disp_vmin, 0, disp_vmax], fontsize=54)
-cbar.ax.text(0.25, 1.01, "X \u2192 Y", fontsize=60, transform=cbar.ax.transAxes,
+cbar.ax.set_yticklabels([disp_vmin, 0, disp_vmax], fontsize=fs, weight="bold")
+cbar.ax.text(0.15, 1.01, "X \u2192 Y", fontsize=fs, transform=cbar.ax.transAxes,
              weight="bold")
-cbar.ax.text(0.25, -.05, "Y \u2192 X", fontsize=60, transform=cbar.ax.transAxes,
+cbar.ax.text(0.15, -.05, "Y \u2192 X", fontsize=fs, transform=cbar.ax.transAxes,
              weight="bold")
-cbar.ax.text(-.2, 0.4, "dPTE - 0.5", rotation="vertical", fontsize=54,
-             transform=cbar.ax.transAxes)
+cbar.ax.text(-.3, 0.37, "dPTE - 0.5", rotation="vertical", fontsize=fs,
+             transform=cbar.ax.transAxes, weight="bold")
 
 # custom legend in Y
 fx_axes["Y"].set_xlim(0, 2)
 fx_axes["Y"].set_ylim(0, 12)
 fx_axes["Y"].axis("off")
-fs = 48
 bar_w, bar_h = 0.6, 0.5
 reg_key = annot_labels[0]["col_key"]
 hemi_key = annot_labels[1]["col_key"]
@@ -353,7 +358,8 @@ for rk, rv in reg_key.items():
         rect = Rectangle((0.1, y), bar_w, bar_h, color=hv)
         fx_axes["Y"].add_patch(rect)
         txt = "{}-{}".format(rk, hk)
-        fx_axes["Y"].text(0.1+bar_w+0.1, y+bar_h/2, txt, fontsize=fs)
+        fx_axes["Y"].text(0.1+bar_w+0.1, y+bar_h/2, txt, fontsize=fs,
+                          weight="bold")
         y -= 1
 
 plt.tight_layout()
@@ -365,26 +371,31 @@ fx_img = np.reshape(np.frombuffer(io_buf.getvalue(), dtype=np.uint8),
                      newshape=(int(fx_fig.bbox.bounds[3]),
                                int(fx_fig.bbox.bounds[2]), -1))
 io_buf.close()
-plt.close(fx_fig)
+#plt.close(fx_fig)
 
 #####
+mos_str = """
+          A
+          B
+          B
+          """
+fig, axes = plt.subplot_mosaic(mos_str, figsize=(19.2, 19.2))
+# axes["A"].set_anchor("W")
+# axes["B"].set_anchor("W")
+axes["A"].imshow(brain_img, aspect="equal")
+axes["B"].imshow(fx_img, aspect="equal")
 
-fig, axes = plt.subplots(2, 1, figsize=(21.6, 21.6))
-axes[0].imshow(brain_img)
-axes[1].imshow(fx_img)
-
-axes[0].set_title("A|  Resting state, top {} connections".format(top_cnx),
+axes["A"].set_title("A|  Resting state, top {} connections".format(top_cnx),
                   fontsize=36, pad=60, loc="left")
-axes[1].set_title("B|  Estimated dPTE for rest and changes from rest by condition", pad=60, loc="left",
+axes["B"].set_title("B|  Estimated dPTE for rest and changes from rest by condition", pad=60, loc="left",
                   fontsize=36)
 
-axes[0].set_anchor("W")
-axes[1].set_anchor("W")
-
 for ax in axes:
-    ax.axis("off")
+    axes[ax].axis("off")
 plt.suptitle("{} directed connectivity".format(band_name[band]),
              fontsize=42)
+
+axes["A"].legend(handles=legend_elements, bbox_to_anchor=(1., 1.25), fontsize=32)
 plt.tight_layout()
 
 plt.savefig("../images/cnx_{}.png".format(band))
@@ -396,14 +407,14 @@ if band == "theta_0":
     brain_img = make_brain_image(views, params_brains["task"], text="",
                                  text_loc="lup", text_pan=0,
                                  orient="horizontal",
-                                 legend=[["Source", "red"], ["Destination", "blue"]],
+                                 legend=None,
                                  legend_pan=3)
     np.save("../images/theta0_task.npy", brain_img)
 if band == "alpha_0":
     brain_img = make_brain_image(views, params_brains["task"], text="",
                                  text_loc="lup", text_pan=0,
                                  orient="horizontal",
-                                 legend=[["Source", "red"], ["Destination", "blue"]],
+                                 legend=None,
                                  legend_pan=3)
     np.save("../images/alpha0_task.npy", brain_img)
 if band == "alpha_1":
@@ -416,34 +427,34 @@ if band == "alpha_1":
                                     text_color=text_color)
     brain_img = make_brain_image(views, motor_brain, text="", text_loc="lup",
                                  text_pan=0, orient="horizontal",
-                                 legend=[["Source", "red"], ["Destination", "blue"]],
+                                 legend=None,
                                  legend_pan=3)
     np.save("../images/alpha1_motor.npy", brain_img)
 
     brain_img = make_brain_image(views, params_brains["task"], text="",
                                  text_loc="lup", text_pan=0,
                                  orient="horizontal",
-                                 legend=[["Source", [1,0,0]], ["Destination", [0,0,1]]],
+                                 legend=None,
                                  legend_pan=3)
     np.save("../images/alpha1_task.npy", brain_img)
 
     brain_img = make_brain_image(views, params_brains["zaehlen"], text="",
                                  text_loc="lup", text_pan=0,
                                  orient="horizontal",
-                                 legend=[["Source", "red"], ["Destination", "blue"]],
+                                 legend=None,
                                  legend_pan=3)
     np.save("../images/alpha1_zaehlen.npy", brain_img)
 if band == "beta_0":
     brain_img = make_brain_image(views, params_brains["rest"], text="",
                                  text_loc="lup", text_pan=0,
                                  orient="horizontal",
-                                 legend=[["Source", "red"], ["Destination", "blue"]],
+                                 legend=None,
                                  legend_pan=3)
     np.save("../images/beta0_rest.npy", brain_img)
 if band == "gamma_0":
     brain_img = make_brain_image(views, params_brains["rest"], text="",
                                  text_loc="lup", text_pan=0,
                                  orient="horizontal",
-                                 legend=[["Source", "red"], ["Destination", "blue"]],
+                                 legend=None,
                                  legend_pan=3)
     np.save("../images/gamma0_rest.npy", brain_img)
