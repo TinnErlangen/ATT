@@ -155,7 +155,7 @@ def dpte_bar_multi_1rest(val_dict, conds, cond_names, xlim=(-0.3, 0.3),
     xticks = np.linspace(xlim[0], xlim[1]+0.0001, 6)
     ax.set_xticks(xticks)
     ax.set_xticklabels(["{:.2f}".format(xt) for xt in xticks], fontsize=50)
-    ax.set_xlabel("estimated regional total dPTE-0.5", fontsize=50)
+    ax.set_xlabel("estimated dPTE-0.5", fontsize=50)
 
     colors = ["tab:green", "tab:purple", "tab:pink"]
     fs = 40
@@ -384,7 +384,6 @@ elif path == "alpha_1_m_AV":
     model = MixedLM.from_formula(formula, big_df, groups=groups)
     fit = model.fit()
     CIs = fit.conf_int()
-
     me = {}
     me["Rest"] = fit.params["Intercept"]
     me["audio"] = fit.params["Intercept"] + fit.params["C(Block, Treatment('rest'))[T.audio]"]
@@ -477,8 +476,8 @@ elif path == "alpha_1_m_AV":
     fig, ax = dpte_bar_multi_1rest(mod_ests, conds, cond_names, leg_loc=(0., 0.35),
                              xlim=(-0.1, 0.1))
     ax.set_title("Motor/Parietal connectivity to A1 and V1", fontsize=38)
-    plt.savefig("../images/fig_5.tif")
-    plt.savefig("../images/fig_5.png")
+    plt.savefig("../images/fig_5a.tif")
+    plt.savefig("../images/fig_5a.png")
 
 # consolidate as single image in numpy format
 io_buf = io.BytesIO()

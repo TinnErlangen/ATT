@@ -47,25 +47,57 @@ proc_dir = "../proc/"
 spacing = 5
 n_jobs = 4
 parc = "RegionGrowing_70"
-labels = mne.read_labels_from_annot("fsaverage",parc=parc,subjects_dir=subjects_dir)
+labels = mne.read_labels_from_annot("fsaverage", parc=parc, subjects_dir=subjects_dir)
 label_names = [lab.name for lab in labels]
 snr = 1.0
 lambda2 = 1.0 / snr ** 2
 
-df_dict = {"Subj":[], "Cond":[], "DICS":[], "dPTE":[]}
+df_dict = {"Subj":[], "Task":[], "Cond":[],
+           "DICS_MP":[], "DICS_M":[], "DICS_P":[], "DICS_A1":[], "DICS_V1":[],
+           "dPTE_MPtoA1":[], "dPTE_MPtoV1":[], "dPTE_MtoA1":[], "dPTE_MtoV1":[],
+           "dPTE_PtoA1":[], "dPTE_PtoV1":[]
+           }
 
 runs = ["rest", "audio", "visual", "visselten"]
 wavs = ["4000fftf", "4000Hz", "7000Hz", "4000cheby"]
+
+## combine ROIs into one ROI then get rid of the individual ones
+new_labels = []
+# Motor Parietal
 ROIs = ["L3395-lh", "L8143-lh", "L7491_L4557-lh", "L4557-lh"]
-# combine ROIs into one ROI then get rid of the individual ones
 ROI_inds = [label_names.index(ROI) for ROI in ROIs]
 new_label = labels[ROI_inds[0]]
 for ROI_idx in ROI_inds[1:]:
     new_label += labels[ROI_idx]
-new_label.name = "Broad_Motor"
-labels = [lab for lab in labels if lab.name not in ROIs] + [new_label]
+new_label.name = "MP"
+new_labels.append(new_label)
+# Motor
+new_label = labels[label_names.index("L3395-lh")]
+new_label.name = "M"
+new_labels.append(new_label)
+# Parietal
+ROIs = ["L8143-lh", "L7491_L4557-lh", "L4557-lh"]
+ROI_inds = [label_names.index(ROI) for ROI in ROIs]
+new_label = labels[ROI_inds[0]]
+for ROI_idx in ROI_inds[1:]:
+    new_label += labels[ROI_idx]
+new_label.name = "P"
+new_labels.append(new_label)
+# auditory
+ROIs = ["L2235-lh", "L7755-lh"]
+ROI_inds = [label_names.index(ROI) for ROI in ROIs]
+new_label = labels[ROI_inds[0]]
+for ROI_idx in ROI_inds[1:]:
+    new_label += labels[ROI_idx]
+new_label.name = "A1"
+new_labels.append(new_label)
+# visual
+new_label = labels[label_names.index("L2340_L1933-lh")]
+new_label.name = "V1"
+new_labels.append(new_label)
+
+labels = new_labels
 label_names = [lab.name for lab in labels]
-ROI_idx = len(label_names)-1  # new label is last in the list
 cov = mne.read_cov("{}empty-cov.fif".format(proc_dir))
 
 for sub in subjs:
@@ -104,18 +136,28 @@ for sub in subjs:
     fwd = mne.read_forward_solution(fwd_name)
     filters = make_dics(epo.info, fwd, csd, real_filter=True,
                         weight_norm=None, reduce_rank=True,
-                        pick_ori="max-power", label=morph_labels[ROI_idx])
-
+                        pick_ori="max-power")
     for event in range(len(epo)):
         print(event)
         event_csd = csd_morlet(epo[event], frequencies=bi["freqs"],
                                n_jobs=n_jobs, n_cycles=bi["cycles"], decim=2)
         stc, freqs = apply_dics_csd(event_csd, filters)
-        dics_datum = stc.data.mean() * 1e+26
-        df_dict["DICS"].append(dics_datum)
-        df_dict["Subj"].append(sub)
-        cond = "rest" if epo[event].events[0,-1] == 255 else "task"
+        dics = mne.extract_label_time_course(stc, morph_labels, fwd["src"],
+                                             mode="mean").mean(axis=1) * 1e+26
+        for roi_idx, roi in enumerate(["MP", "M", "P", "A1", "V1"]):
+            df_dict[f"DICS_{roi}"].append(dics[roi_idx])
+
+        if epo[event].events[0,-1] == 255:
+            cond = "rest"
+        elif 10 <= epo[event].events[0,-1] <= 19:
+            cond = "audio"
+        elif 20 <= epo[event].events[0,-1] <= 29:
+            cond = "visselten"
+        elif 30 <= epo[event].events[0,-1] <= 39:
+            cond = "visual"
+        task = "rest" if epo[event].events[0,-1] == 255 else "task"
         df_dict["Cond"].append(cond)
+        df_dict["Task"].append(task)
 
     # dPTE
     inv_op = mne.minimum_norm.make_inverse_operator(epo.info, fwd, cov)
@@ -127,11 +169,15 @@ for sub in subjs:
                                           mode="pca_flip")
     l_arr = np.array(l_arr)
     dPTE = epo_dPTE(l_arr, bi["freqs"], epo.info["sfreq"],
-                    n_cycles=bi["cycles"], n_jobs=n_jobs, roi=ROI_idx)
-    dPTE = dPTE[:, ROI_idx,]
+                    n_cycles=bi["cycles"], n_jobs=n_jobs)
     for epo_idx in range(len(dPTE)):
-        avg_dpte = (dPTE[epo_idx,][dPTE[epo_idx,].nonzero()]-0.5).mean()
-        df_dict["dPTE"].append(avg_dpte)
+        df_dict["Subj"].append(sub)
+        df_dict["dPTE_MPtoA1"].append(dPTE[epo_idx, 0, 3] - 0.5)
+        df_dict["dPTE_MPtoV1"].append(dPTE[epo_idx, 0, 4] - 0.5)
+        df_dict["dPTE_MtoA1"].append(dPTE[epo_idx, 1, 3] - 0.5)
+        df_dict["dPTE_MtoV1"].append(dPTE[epo_idx, 1, 4] - 0.5)
+        df_dict["dPTE_PtoA1"].append(dPTE[epo_idx, 2, 3] - 0.5)
+        df_dict["dPTE_PtoV1"].append(dPTE[epo_idx, 2, 4] - 0.5)
 
 df = pd.DataFrame.from_dict(df_dict)
 df.to_pickle("{}mu_dics_dpte.pickle".format(proc_dir))
